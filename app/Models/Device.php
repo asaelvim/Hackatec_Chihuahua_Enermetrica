@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Device extends Model
 {
@@ -21,6 +22,17 @@ class Device extends Model
         'status',
         'last_reading_at',
     ];
+
+    protected $hidden = [
+        'api_token',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Device $device) {
+            $device->api_token ??= Str::random(40);
+        });
+    }
 
     protected function casts(): array
     {
