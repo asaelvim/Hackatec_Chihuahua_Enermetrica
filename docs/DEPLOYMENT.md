@@ -137,15 +137,50 @@ detiene solo cuando ya no hay pendientes, para no dejar procesos huérfanos):
 - Confirma que el cron corre: `tail -f storage/logs/laravel.log` tras el
   minuto en que debería ejecutarse `schedule:run`.
 
-## 8. Actualizaciones futuras
+## 8. Despliegues automáticos con GitHub Actions
+
+El repositorio incluye `.github/workflows/deploy-dreamhost.yml`. Se ejecuta
+automáticamente al hacer *push* a `main`, o manualmente desde la pestaña
+**Actions** de GitHub. El workflow compila los assets en GitHub, sincroniza el
+código por SSH y después ejecuta las migraciones y los cachés de Laravel en
+DreamHost.
+
+Antes de habilitarlo, crea estos **Actions secrets** en
+*Settings → Secrets and variables → Actions* del repositorio:
+
+| Secret | Valor |
+| --- | --- |
+| `DEPLOY_APP_PATH` | Ruta absoluta del proyecto, p. ej. `/home/usuario/enermetrica-app`. |
+| `DEPLOY_PUBLIC_PATH` | *Document root* absoluto del dominio, p. ej. `/home/usuario/tudominio.com`. |
+| `DEPLOY_SSH_HOST` | Host SSH de DreamHost. |
+| `DEPLOY_SSH_USER` | Usuario de shell con acceso a ambas rutas. |
+| `DEPLOY_SSH_PRIVATE_KEY` | Clave privada ED25519 dedicada para el despliegue. |
+| `DEPLOY_SSH_KNOWN_HOSTS` | Clave pública del host SSH en formato `known_hosts`. |
+
+Genera la clave de despliegue localmente y agrega la clave pública al usuario
+de shell de DreamHost:
 
 ```bash
-cd ~/enermetrica-app
-git pull
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan config:cache && php artisan route:cache && php artisan view:cache
+ssh-keygen -t ed25519 -f ~/.ssh/enermetrica_deploy -C "github-actions-deploy"
 ```
 
-Si cambiaste assets de frontend, recuerda recompilar (`npm run build`) y subir
-de nuevo `public/build/`.
+Obtén la huella del servidor desde una conexión que ya hayas validado y guárdala
+en `DEPLOY_SSH_KNOWN_HOSTS`:
+
+```bash
+ssh-keyscan -H <host-ssh-de-dreamhost>
+```
+
+> Verifica la huella con DreamHost antes de guardar su salida como secreto.
+> No desactives la verificación del host para sortear este paso.
+
+El workflow conserva `.env`, `storage/` y `storage/firebase-credentials.json`
+en el servidor; no se suben al repositorio ni se sustituyen durante un
+despliegue. También copia el contenido de `public/` al *document root*, tal
+como se describe en la sección 2.
+
+## 9. Actualizaciones futuras
+
+Haz *push* a `main`; GitHub Actions realizará el despliegue. Si necesitas
+ejecutarlo sin cambios de código, inicia el workflow manualmente desde
+**Actions → Deploy to DreamHost → Run workflow**.

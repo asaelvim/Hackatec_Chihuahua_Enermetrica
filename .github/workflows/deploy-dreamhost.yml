@@ -1,0 +1,96 @@
+name: Deploy to DreamHost
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_APP_PATH: ${{ secrets.DEPLOY_APP_PATH }}
+      DEPLOY_PUBLIC_PATH: ${{ secrets.DEPLOY_PUBLIC_PATH }}
+      SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+      SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+      SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+      SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install and build frontend assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate deployment configuration
+        run: |
+          test -n "$DEPLOY_APP_PATH" || { echo "::error::Missing DEPLOY_APP_PATH secret."; exit 1; }
+          test -n "$DEPLOY_PUBLIC_PATH" || { echo "::error::Missing DEPLOY_PUBLIC_PATH secret."; exit 1; }
+          test -n "$SSH_HOST" || { echo "::error::Missing DEPLOY_SSH_HOST secret."; exit 1; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo "::error::Missing DEPLOY_SSH_KNOWN_HOSTS secret."; exit 1; }
+          test -n "$SSH_PRIVATE_KEY" || { echo "::error::Missing DEPLOY_SSH_PRIVATE_KEY secret."; exit 1; }
+          test -n "$SSH_USER" || { echo "::error::Missing DEPLOY_SSH_USER secret."; exit 1; }
+
+      - name: Configure SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload application source
+        run: |
+          rsync --archive --compress --delete \
+            --exclude='.env' \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='bootstrap/cache/' \
+            --exclude='node_modules/' \
+            --exclude='public/storage' \
+            --exclude='storage/' \
+            --exclude='vendor/' \
+            -e 'ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes' \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_APP_PATH/"
+
+      - name: Publish frontend assets and public files
+        run: |
+          rsync --archive --compress \
+            --exclude='storage' \
+            -e 'ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes' \
+            public/ "$SSH_USER@$SSH_HOST:$DEPLOY_PUBLIC_PATH/"
+
+      - name: Install dependencies and activate release
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$SSH_USER@$SSH_HOST" bash -s -- "$DEPLOY_APP_PATH" <<'REMOTE'
+          set -euo pipefail
+
+          app_path="$1"
+          cd "$app_path"
+
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+          php artisan migrate --force
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan storage:link
+          REMOTE
