@@ -51,6 +51,9 @@ new class extends Component
                     <x-nav-link :href="route('web.catalogs.index')" :active="request()->routeIs('web.catalogs.*')" wire:navigate>
                         {{ __('Catálogos') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('web.users.index')" :active="request()->routeIs('web.users.*')" wire:navigate>
+                        {{ __('Usuarios') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -119,6 +122,9 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('web.catalogs.index')" :active="request()->routeIs('web.catalogs.*')" wire:navigate>
                 {{ __('Catálogos') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.users.index')" :active="request()->routeIs('web.users.*')" wire:navigate>
+                {{ __('Usuarios') }}
             </x-responsive-nav-link>
         </div>
 

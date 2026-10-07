@@ -16,6 +16,7 @@ Route::name('web.')->middleware(['auth', 'verified'])->group(function () {
     Volt::route('horarios', 'pages.schedules.index')->name('schedules.index');
     Volt::route('anomalias', 'pages.anomalies.index')->name('anomalies.index');
     Volt::route('estadisticas', 'pages.statistics.index')->name('statistics.index');
+    Volt::route('usuarios', 'pages.users.index')->name('users.index');
 });
 
 Route::view('profile', 'profile')
