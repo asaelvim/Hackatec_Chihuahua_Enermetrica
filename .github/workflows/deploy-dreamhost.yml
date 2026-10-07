@@ -73,8 +73,14 @@ jobs:
 
       - name: Publish frontend assets and public files
         run: |
+          # index.php y .htaccess se excluyen a propósito: en hosting compartido
+          # se editan una sola vez a mano en el servidor (rutas al proyecto real,
+          # que vive en una carpeta hermana del document root) y no deben
+          # sobrescribirse con la versión por defecto de Laravel en cada deploy.
           rsync --archive --compress \
             --exclude='storage' \
+            --exclude='index.php' \
+            --exclude='.htaccess' \
             -e 'ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=yes' \
             public/ "$SSH_USER@$SSH_HOST:$DEPLOY_PUBLIC_PATH/"
 

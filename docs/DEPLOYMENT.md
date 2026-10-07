@@ -181,7 +181,10 @@ ssh-keyscan -H <host-ssh-de-dreamhost>
 El workflow conserva `.env`, `storage/` y `storage/firebase-credentials.json`
 en el servidor; no se suben al repositorio ni se sustituyen durante un
 despliegue. También copia el contenido de `public/` al *document root*, tal
-como se describe en la sección 2.
+como se describe en la sección 2, **excepto `index.php` y `.htaccess`**: esos
+dos los editaste una sola vez a mano (apuntando a la carpeta hermana del
+proyecto) y el workflow nunca los toca, para no revertir esa configuración con
+la versión por defecto de Laravel.
 
 ## 9. Actualizaciones futuras
 
