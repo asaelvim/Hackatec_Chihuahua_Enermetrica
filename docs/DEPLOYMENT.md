@@ -64,8 +64,12 @@ APP_DEBUG=false
 APP_URL=https://tudominio.com
 APP_TIMEZONE=America/Chihuahua
 
+APP_KEY=   # se completa con `php artisan key:generate`, no la generes manualmente
+
 DB_CONNECTION=mysql
-DB_HOST=mysql.tudominio.com   # host que te da el panel de DreamHost
+DB_HOST=mysql.tudominio.com   # usa el "Hostname" exacto que muestra el panel
+                              # (Databases → MySQL Databases); puede tardar
+                              # hasta ~90 min en resolver si la BD es nueva
 DB_PORT=3306
 DB_DATABASE=nombre_bd
 DB_USERNAME=usuario_bd
