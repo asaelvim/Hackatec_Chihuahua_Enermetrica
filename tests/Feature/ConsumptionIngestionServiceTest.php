@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\ConsumptionReading;
 use App\Models\Device;
 use App\Models\Schedule;
+use App\Models\User;
+use App\Notifications\AnomalyDetected;
 use App\Services\ConsumptionIngestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ConsumptionIngestionServiceTest extends TestCase
@@ -95,5 +98,39 @@ class ConsumptionIngestionServiceTest extends TestCase
         $result = app(ConsumptionIngestionService::class)->ingest($device, 5000);
 
         $this->assertNull($result['anomaly']);
+    }
+
+    public function test_ingest_notifies_users_when_an_anomaly_is_flagged(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $device = Device::factory()->create(['status' => 'on']);
+
+        ConsumptionReading::factory()
+            ->count(10)
+            ->for($device)
+            ->sequence(fn ($sequence) => ['value' => 90 + (($sequence->index % 5) * 5)])
+            ->create(['read_at' => Carbon::now()->subDays(1)]);
+
+        $result = app(ConsumptionIngestionService::class)->ingest($device, 5000);
+
+        Notification::assertSentTo(
+            $user,
+            AnomalyDetected::class,
+            fn ($notification) => $notification->toArray($user)['device_id'] === $device->id
+        );
+    }
+
+    public function test_ingest_does_not_notify_when_no_anomaly_is_flagged(): void
+    {
+        Notification::fake();
+
+        User::factory()->create();
+        $device = Device::factory()->create(['status' => 'on']);
+
+        app(ConsumptionIngestionService::class)->ingest($device, 100);
+
+        Notification::assertNothingSent();
     }
 }

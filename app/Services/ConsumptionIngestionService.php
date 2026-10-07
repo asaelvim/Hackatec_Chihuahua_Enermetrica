@@ -5,7 +5,10 @@ namespace App\Services;
 use App\Models\Anomaly;
 use App\Models\ConsumptionReading;
 use App\Models\Device;
+use App\Models\User;
+use App\Notifications\AnomalyDetected;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 
 class ConsumptionIngestionService
 {
@@ -36,6 +39,10 @@ class ConsumptionIngestionService
         ]);
 
         $anomaly = $this->anomalyDetectionService->evaluate($reading);
+
+        if ($anomaly) {
+            Notification::send(User::all(), new AnomalyDetected($anomaly));
+        }
 
         return ['reading' => $reading, 'anomaly' => $anomaly];
     }
