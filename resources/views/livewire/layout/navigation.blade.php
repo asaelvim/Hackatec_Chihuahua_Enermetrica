@@ -33,6 +33,24 @@ new class extends Component
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('web.areas.index')" :active="request()->routeIs('web.areas.*')" wire:navigate>
+                        {{ __('Áreas') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('web.devices.index')" :active="request()->routeIs('web.devices.*')" wire:navigate>
+                        {{ __('Dispositivos') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('web.schedules.index')" :active="request()->routeIs('web.schedules.*')" wire:navigate>
+                        {{ __('Horarios') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('web.anomalies.index')" :active="request()->routeIs('web.anomalies.*')" wire:navigate>
+                        {{ __('Anomalías') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('web.statistics.index')" :active="request()->routeIs('web.statistics.*')" wire:navigate>
+                        {{ __('Estadísticas') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('web.catalogs.index')" :active="request()->routeIs('web.catalogs.*')" wire:navigate>
+                        {{ __('Catálogos') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -83,6 +101,24 @@ new class extends Component
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
                 {{ __('Dashboard') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.areas.index')" :active="request()->routeIs('web.areas.*')" wire:navigate>
+                {{ __('Áreas') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.devices.index')" :active="request()->routeIs('web.devices.*')" wire:navigate>
+                {{ __('Dispositivos') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.schedules.index')" :active="request()->routeIs('web.schedules.*')" wire:navigate>
+                {{ __('Horarios') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.anomalies.index')" :active="request()->routeIs('web.anomalies.*')" wire:navigate>
+                {{ __('Anomalías') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.statistics.index')" :active="request()->routeIs('web.statistics.*')" wire:navigate>
+                {{ __('Estadísticas') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('web.catalogs.index')" :active="request()->routeIs('web.catalogs.*')" wire:navigate>
+                {{ __('Catálogos') }}
             </x-responsive-nav-link>
         </div>
 
