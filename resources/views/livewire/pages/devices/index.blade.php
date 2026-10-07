@@ -75,6 +75,7 @@ class extends Component
         Device::updateOrCreate(['id' => $this->editingId], $data);
 
         $this->showModal = false;
+        $this->dispatch('close');
         session()->flash('status', 'Dispositivo guardado correctamente.');
     }
 
@@ -87,6 +88,7 @@ class extends Component
     {
         Device::findOrFail($this->confirmingDeleteId)->delete();
         $this->confirmingDeleteId = null;
+        $this->dispatch('close');
         session()->flash('status', 'Dispositivo eliminado correctamente.');
     }
 
@@ -102,7 +104,7 @@ class extends Component
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800">Dispositivos</h2>
-            <button type="button" wire:click="create"
+            <button type="button" wire:click="create" x-data="" x-on:click="$dispatch('open-modal', 'device-form')"
                 class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition">
                 + Agregar dispositivo
             </button>
@@ -135,9 +137,9 @@ class extends Component
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $device->deviceType?->name ?? '—' }}</td>
                             <td class="px-6 py-4 text-sm"><x-status-badge :status="$device->status" /></td>
                             <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
-                                <button wire:click="regenerateToken({{ $device->id }})" class="text-gray-500 hover:text-gray-700">Regenerar token</button>
-                                <button wire:click="edit({{ $device->id }})" class="text-blue-600 hover:text-blue-800">Editar</button>
-                                <button wire:click="confirmDelete({{ $device->id }})" class="text-red-600 hover:text-red-800">Eliminar</button>
+                                <button wire:click="regenerateToken({{ $device->id }})" x-data="" x-on:click="$dispatch('open-modal', 'device-token')" class="text-gray-500 hover:text-gray-700">Regenerar token</button>
+                                <button wire:click="edit({{ $device->id }})" x-data="" x-on:click="$dispatch('open-modal', 'device-form')" class="text-blue-600 hover:text-blue-800">Editar</button>
+                                <button wire:click="confirmDelete({{ $device->id }})" x-data="" x-on:click="$dispatch('open-modal', 'device-delete')" class="text-red-600 hover:text-red-800">Eliminar</button>
                             </td>
                         </tr>
                     @empty
@@ -206,7 +208,7 @@ class extends Component
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
-                <x-secondary-button type="button" wire:click="$set('showModal', false)">Cancelar</x-secondary-button>
+                <x-secondary-button type="button" wire:click="$set('showModal', false)" x-data="" x-on:click="$dispatch('close')">Cancelar</x-secondary-button>
                 <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-500">
                     Guardar
                 </button>
@@ -220,7 +222,7 @@ class extends Component
             <h3 class="text-lg font-medium text-gray-900">¿Eliminar este dispositivo?</h3>
             <p class="text-sm text-gray-500">Esta acción no se puede deshacer.</p>
             <div class="flex justify-end gap-3">
-                <x-secondary-button type="button" wire:click="$set('confirmingDeleteId', null)">Cancelar</x-secondary-button>
+                <x-secondary-button type="button" wire:click="$set('confirmingDeleteId', null)" x-data="" x-on:click="$dispatch('close')">Cancelar</x-secondary-button>
                 <x-danger-button wire:click="delete">Eliminar</x-danger-button>
             </div>
         </div>
@@ -237,7 +239,7 @@ class extends Component
                 {{ $generatedToken }}
             </code>
             <div class="flex justify-end">
-                <x-secondary-button type="button" wire:click="$set('generatedToken', null)">Cerrar</x-secondary-button>
+                <x-secondary-button type="button" wire:click="$set('generatedToken', null)" x-data="" x-on:click="$dispatch('close')">Cerrar</x-secondary-button>
             </div>
         </div>
     </x-modal>

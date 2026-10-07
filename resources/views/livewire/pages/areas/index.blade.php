@@ -50,6 +50,7 @@ class extends Component
 
         $this->showModal = false;
         $this->reset(['editingId', 'name']);
+        $this->dispatch('close');
         session()->flash('status', 'Área guardada correctamente.');
     }
 
@@ -62,6 +63,7 @@ class extends Component
     {
         Area::findOrFail($this->confirmingDeleteId)->delete();
         $this->confirmingDeleteId = null;
+        $this->dispatch('close');
         session()->flash('status', 'Área eliminada correctamente.');
     }
 }; ?>
@@ -70,7 +72,7 @@ class extends Component
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-gray-800">Áreas</h2>
-            <button type="button" wire:click="create"
+            <button type="button" wire:click="create" x-data="" x-on:click="$dispatch('open-modal', 'area-form')"
                 class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition">
                 + Agregar área
             </button>
@@ -99,8 +101,8 @@ class extends Component
                             <td class="px-6 py-4 text-sm font-medium text-gray-800">{{ $area->name }}</td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $area->devices_count }}</td>
                             <td class="px-6 py-4 text-right text-sm space-x-3">
-                                <button wire:click="edit({{ $area->id }})" class="text-blue-600 hover:text-blue-800">Editar</button>
-                                <button wire:click="confirmDelete({{ $area->id }})" class="text-red-600 hover:text-red-800">Eliminar</button>
+                                <button wire:click="edit({{ $area->id }})" x-data="" x-on:click="$dispatch('open-modal', 'area-form')" class="text-blue-600 hover:text-blue-800">Editar</button>
+                                <button wire:click="confirmDelete({{ $area->id }})" x-data="" x-on:click="$dispatch('open-modal', 'area-delete')" class="text-red-600 hover:text-red-800">Eliminar</button>
                             </td>
                         </tr>
                     @empty
@@ -129,7 +131,7 @@ class extends Component
             </div>
 
             <div class="flex justify-end gap-3 pt-2">
-                <x-secondary-button type="button" wire:click="$set('showModal', false)">Cancelar</x-secondary-button>
+                <x-secondary-button type="button" wire:click="$set('showModal', false)" x-data="" x-on:click="$dispatch('close')">Cancelar</x-secondary-button>
                 <button type="submit"
                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-500">
                     Guardar
@@ -146,7 +148,7 @@ class extends Component
                 Esta acción no se puede deshacer. Los dispositivos asociados también se eliminarán.
             </p>
             <div class="flex justify-end gap-3">
-                <x-secondary-button type="button" wire:click="$set('confirmingDeleteId', null)">Cancelar</x-secondary-button>
+                <x-secondary-button type="button" wire:click="$set('confirmingDeleteId', null)" x-data="" x-on:click="$dispatch('close')">Cancelar</x-secondary-button>
                 <x-danger-button wire:click="delete">Eliminar</x-danger-button>
             </div>
         </div>
