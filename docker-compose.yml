@@ -34,3 +34,13 @@ services:
     environment:
       - PMA_HOST=db
       - PMA_PORT=3306
+  node:
+    image: node:22-alpine
+    working_dir: /var/www/html
+    volumes:
+      - "./:/var/www/html/"
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - 5173:5173
+    profiles:
+      - dev
