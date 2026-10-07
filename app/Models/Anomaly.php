@@ -18,6 +18,7 @@ class Anomaly extends Model
         'z_score',
         'value',
         'notified_at',
+        'reviewed_at',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class Anomaly extends Model
             'z_score' => 'decimal:4',
             'value' => 'decimal:2',
             'notified_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 
