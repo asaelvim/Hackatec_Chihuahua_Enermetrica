@@ -91,6 +91,12 @@ jobs:
           set -euo pipefail
 
           app_path="$1"
+
+          # bash -s via SSH arranca sin sesión de login, así que no lee
+          # ~/.bash_profile por su cuenta; lo cargamos a mano para tener en el
+          # PATH el PHP 8.4 y el Composer instalados manualmente en el servidor.
+          source ~/.bash_profile
+
           cd "$app_path"
 
           composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
