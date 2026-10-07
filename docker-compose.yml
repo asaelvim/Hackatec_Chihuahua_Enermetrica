@@ -1,0 +1,36 @@
+services:
+  www:
+    build: .
+    volumes:
+      - "./:/var/www/html/"
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - TZ=America/Chihuahua
+      - DB_HOST=db
+      - DB_DATABASE=enermetrica
+      - DB_USERNAME=enermetrica
+      - DB_PASSWORD=enermetrica123
+    depends_on:
+      - db
+  db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=enermetrica
+      - MYSQL_USER=enermetrica
+      - MYSQL_PASSWORD=enermetrica123
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+      - TZ=America/Chihuahua
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    ports:
+      - 3306:3306
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - 8001:80
+    environment:
+      - PMA_HOST=db
+      - PMA_PORT=3306
