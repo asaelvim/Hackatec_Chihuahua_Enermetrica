@@ -11,30 +11,61 @@ use App\Services\ConsumptionIngestionService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 
 /**
- * Genera una lectura de consumo "en vivo" para un dispositivo simulado,
- * pensado para correr cada minuto desde el scheduler (igual que
- * MarkOfflineDevices/SummarizeDailyConsumption). A diferencia de
- * app:seed-demo-data (que rellena historia de golpe), este comando añade
- * una sola lectura nueva cada vez que se ejecuta, para que el dashboard se
- * vea "vivo" sin necesidad de hardware real.
+ * Genera lecturas de consumo "en vivo" para un dispositivo simulado, pensado
+ * para correr cada minuto desde el scheduler (igual que
+ * MarkOfflineDevices/SummarizeDailyConsumption). Como el cron de DreamHost no
+ * puede dispararse más seguido que una vez por minuto, este comando genera
+ * varias lecturas en un bucle interno (por defecto cada 5s durante ~55s) cada
+ * vez que el scheduler lo invoca, para que el dashboard se vea "vivo" cada
+ * pocos segundos sin necesitar hardware real.
  *
  * El valor es un paseo aleatorio con reversión a la media (se mantiene
  * estable la mayoría del tiempo) y ocasionalmente dispara un "evento"
  * (bajón o subida) que se recupera solo en las siguientes lecturas.
  */
-#[Signature('app:simulate-live-readings {--watts=450 : Consumo base en watts} {--device= : Nombre del dispositivo simulado}')]
-#[Description('Genera una lectura de consumo artificial para simular un dispositivo en tiempo real')]
+#[Signature('app:simulate-live-readings
+    {--watts=450 : Consumo base en watts}
+    {--device= : Nombre del dispositivo simulado}
+    {--interval=5 : Segundos entre cada lectura}
+    {--duration=55 : Segundos totales que el comando se queda generando lecturas}
+    {--once : Genera una sola lectura y termina de inmediato (útil para pruebas)}')]
+#[Description('Genera lecturas de consumo artificiales para simular un dispositivo en tiempo real')]
 class SimulateLiveReadings extends Command
 {
     public function handle(ConsumptionIngestionService $ingestionService): int
     {
         $baseWatts = (float) $this->option('watts');
         $deviceName = (string) ($this->option('device') ?: 'Simulador en vivo');
+        $interval = max(1, (int) $this->option('interval'));
+        $duration = max($interval, (int) $this->option('duration'));
+        $once = (bool) $this->option('once');
 
         $device = $this->resolveDevice($deviceName);
 
+        $deadline = Carbon::now()->addSeconds($duration);
+
+        do {
+            $this->generateReading($ingestionService, $device, $baseWatts);
+
+            if ($once || Carbon::now()->greaterThanOrEqualTo($deadline)) {
+                break;
+            }
+
+            sleep($interval);
+        } while (true);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Calcula y guarda una única lectura nueva a partir de la última
+     * registrada para el dispositivo.
+     */
+    private function generateReading(ConsumptionIngestionService $ingestionService, Device $device, float $baseWatts): void
+    {
         $lastReading = ConsumptionReading::query()
             ->where('device_id', $device->id)
             ->latest('read_at')
@@ -53,8 +84,6 @@ class SimulateLiveReadings extends Command
             $value,
             $result['anomaly'] ? ' (anomalía detectada)' : ''
         ));
-
-        return self::SUCCESS;
     }
 
     /**
