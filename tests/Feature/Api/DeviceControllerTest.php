@@ -72,15 +72,19 @@ class DeviceControllerTest extends TestCase
         $response->assertNoContent();
     }
 
-    public function test_it_regenerates_the_device_api_token(): void
+    public function test_updating_the_controller_to_off_turns_off_its_relay_devices(): void
     {
         Sanctum::actingAs(User::factory()->create());
-        $device = Device::factory()->create();
-        $originalToken = $device->api_token;
+        $esp32 = Device::factory()->create(['status' => 'on']);
+        $relay = Device::factory()->controlledBy($esp32, 1)->create(['status' => 'on']);
 
-        $response = $this->postJson("/api/devices/{$device->id}/regenerate-token");
+        $response = $this->putJson("/api/devices/{$esp32->id}", [
+            'name' => $esp32->name,
+            'area_id' => $esp32->area_id,
+            'status' => 'off',
+        ]);
 
         $response->assertOk();
-        $this->assertNotEquals($originalToken, $device->fresh()->api_token);
+        $this->assertSame('off', $relay->fresh()->status);
     }
 }

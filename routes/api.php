@@ -41,7 +41,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('device-models', DeviceModelController::class);
 
     Route::apiResource('devices', DeviceController::class);
-    Route::post('/devices/{device}/regenerate-token', [DeviceController::class, 'regenerateToken']);
     Route::post('/devices/{device}/toggle-status', [DeviceController::class, 'toggleStatus']);
 
     Route::apiResource('schedules', ScheduleController::class);

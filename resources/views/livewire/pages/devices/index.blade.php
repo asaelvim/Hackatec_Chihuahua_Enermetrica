@@ -4,7 +4,6 @@ use App\Models\Area;
 use App\Models\Device;
 use App\Models\DeviceModel;
 use App\Models\DeviceType;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -31,8 +30,6 @@ class extends Component
     public string $status = 'off';
 
     public ?int $confirmingDeleteId = null;
-
-    public ?string $generatedToken = null;
 
     public ?int $controller_device_id = null;
 
@@ -93,7 +90,13 @@ class extends Component
             ],
         ]);
 
-        Device::updateOrCreate(['id' => $this->editingId], $data);
+        $previousStatus = $this->editingId ? Device::find($this->editingId)?->status : null;
+
+        $device = Device::updateOrCreate(['id' => $this->editingId], $data);
+
+        if ($previousStatus === 'on' && $device->status !== 'on') {
+            $device->turnOffControlledRelayDevices(auth()->user());
+        }
 
         $this->showModal = false;
         $this->dispatch('close');
@@ -111,13 +114,6 @@ class extends Component
         $this->confirmingDeleteId = null;
         $this->dispatch('close');
         session()->flash('status', 'Dispositivo eliminado correctamente.');
-    }
-
-    public function regenerateToken(int $deviceId): void
-    {
-        $device = Device::findOrFail($deviceId);
-        $device->forceFill(['api_token' => Str::random(40)])->save();
-        $this->generatedToken = $device->api_token;
     }
 
     /**
@@ -186,7 +182,6 @@ class extends Component
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-right text-sm space-x-3 whitespace-nowrap">
-                                <button wire:click="regenerateToken({{ $device->id }})" x-data="" x-on:click="$dispatch('open-modal', 'device-token')" class="text-gray-500 hover:text-gray-700">Regenerar token</button>
                                 <button wire:click="edit({{ $device->id }})" x-data="" x-on:click="$dispatch('open-modal', 'device-form')" class="text-blue-600 hover:text-blue-800">Editar</button>
                                 <button wire:click="confirmDelete({{ $device->id }})" x-data="" x-on:click="$dispatch('open-modal', 'device-delete')" class="text-red-600 hover:text-red-800">Eliminar</button>
                             </td>
@@ -301,22 +296,6 @@ class extends Component
             <div class="flex justify-end gap-3">
                 <x-secondary-button type="button" wire:click="$set('confirmingDeleteId', null)" x-data="" x-on:click="$dispatch('close')">Cancelar</x-secondary-button>
                 <x-danger-button wire:click="delete">Eliminar</x-danger-button>
-            </div>
-        </div>
-    </x-modal>
-
-    <!-- Modal token regenerado -->
-    <x-modal name="device-token" :show="$generatedToken !== null" maxWidth="md" focusable>
-        <div class="p-6 space-y-4">
-            <h3 class="text-lg font-medium text-gray-900">Nuevo token del dispositivo</h3>
-            <p class="text-sm text-gray-500">
-                Cópialo ahora: por seguridad no se volverá a mostrar. Configúralo en el sensor para que siga enviando lecturas.
-            </p>
-            <code class="block w-full break-all bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-800">
-                {{ $generatedToken }}
-            </code>
-            <div class="flex justify-end">
-                <x-secondary-button type="button" wire:click="$set('generatedToken', null)" x-data="" x-on:click="$dispatch('close')">Cerrar</x-secondary-button>
             </div>
         </div>
     </x-modal>

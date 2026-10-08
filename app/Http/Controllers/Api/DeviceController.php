@@ -8,7 +8,6 @@ use App\Http\Requests\Api\UpdateDeviceRequest;
 use App\Http\Resources\DeviceResource;
 use App\Models\Device;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class DeviceController extends Controller
 {
@@ -45,7 +44,13 @@ class DeviceController extends Controller
      */
     public function update(UpdateDeviceRequest $request, Device $device)
     {
+        $previousStatus = $device->status;
+
         $device->update($request->validated());
+
+        if ($previousStatus === 'on' && $device->status !== 'on') {
+            $device->turnOffControlledRelayDevices($request->user());
+        }
 
         return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel', 'controller']));
     }
@@ -58,16 +63,6 @@ class DeviceController extends Controller
         $device->delete();
 
         return response()->noContent();
-    }
-
-    /**
-     * Genera un nuevo api_token para el dispositivo, invalidando el anterior.
-     */
-    public function regenerateToken(Device $device)
-    {
-        $device->forceFill(['api_token' => Str::random(40)])->save();
-
-        return response()->json(['api_token' => $device->api_token]);
     }
 
     /**

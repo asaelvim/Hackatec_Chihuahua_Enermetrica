@@ -124,6 +124,24 @@ class Device extends Model
     }
 
     /**
+     * Apaga (status = off) los dispositivos que este controla a través de
+     * sus relevadores y que actualmente estén encendidos. Se usa cuando
+     * este dispositivo (normalmente el ESP32) deja de estar "on", ya que
+     * en ese caso ya no puede sostener sus relevadores encendidos.
+     */
+    public function turnOffControlledRelayDevices(?User $actor = null): void
+    {
+        $this->relayDevices()
+            ->where('status', 'on')
+            ->get()
+            ->each(fn (Device $relayDevice) => $relayDevice->update([
+                'status' => 'off',
+                'commanded_at' => now(),
+                'commanded_by' => $actor?->id,
+            ]));
+    }
+
+    /**
      * Enciende/apaga con un clic (desde el panel web o la app móvil).
      * No hace nada si el estado actual es "offline"/"maintenance" (esos
      * solo se cambian forzosamente desde Editar). Devuelve si se aplicó.
@@ -142,6 +160,10 @@ class Device extends Model
                 ? ['commanded_at' => now(), 'commanded_by' => $actor?->id]
                 : []
         ));
+
+        if ($newStatus !== 'on') {
+            $this->turnOffControlledRelayDevices($actor);
+        }
 
         return true;
     }
