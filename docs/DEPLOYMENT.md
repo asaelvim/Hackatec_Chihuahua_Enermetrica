@@ -110,27 +110,47 @@ chmod -R 775 storage bootstrap/cache
 
 ## 6. Cron jobs (panel DreamHost → *Cron Jobs*)
 
-DreamHost no soporta procesos persistentes (`queue:work` como demonio), así
-que todo se ejecuta vía cron cada minuto:
+DreamHost no soporta procesos persistentes (`queue:work` como demonio) ni
+siempre permite elegir "cada minuto" en su panel (el selector de Minutes
+limita cuántos valores puedes marcar a mano con "Selected Minutes"). El
+`routes/console.php` actual solo tiene tareas con granularidad de 15 minutos
+o más (`MarkOfflineDevices` cada 15 min, `SummarizeDailyConsumption` a las
+`00:15`), así que basta con disparar el scheduler cada 15 minutos usando la
+opción nativa del panel, sin necesitar ningún truco de loop:
 
-**Scheduler de Laravel** (ejecuta los jobs `SummarizeDailyConsumption`,
-`MarkOfflineDevices` y `SimulateLiveReadings` definidos en `routes/console.php`):
+**Scheduler de Laravel** (ejecuta `MarkOfflineDevices` y
+`SummarizeDailyConsumption`, definidos en `routes/console.php`):
+
+- Panel DreamHost → Minutes: **"Every 15 minutes"**
+- Comando:
+  ```
+  cd /home/tu-usuario/enermetrica-app && php artisan schedule:run >> /dev/null 2>&1
+  ```
+
+> Si en el futuro se agrega una tarea programada con una cadencia más fina
+> (por minuto o por segundos, como el antiguo `SimulateLiveReadings`), hay
+> que volver a bajar la granularidad del cron (por ejemplo "Every 10 minutes"
+> + un loop interno con `sleep`) y asegurarse de que esa nueva tarea caiga en
+> los minutos que el cron realmente visita.
+
+**Notificaciones de anomalías**: en vez de depender de un segundo cron para
+`queue:work` (con el riesgo de que las notificaciones tarden hasta el
+siguiente disparo del cron en salir), este proyecto usa:
 
 ```
-* * * * * cd /home/tu-usuario/enermetrica-app && php artisan schedule:run >> /dev/null 2>&1
+QUEUE_CONNECTION=sync
 ```
 
-**Cola de notificaciones** (procesa los jobs encolados —correos y push— y se
-detiene solo cuando ya no hay pendientes, para no dejar procesos huérfanos):
+en el `.env` de producción. Con esto, en cuanto `AnomalyDetectionService`
+detecta una anomalía y la guarda, el correo y el push (FCM) se envían de
+inmediato, dentro de la misma petición HTTP que ingirió la lectura — sin
+necesitar ningún cron adicional para la cola. El costo es que esa petición
+de ingesta tarda un poco más (espera a que SMTP/FCM respondan).
 
-```
-* * * * * cd /home/tu-usuario/enermetrica-app && php artisan queue:work --stop-when-empty --max-time=50 >> /dev/null 2>&1
-```
-
-> Nota: si tu plan no soporta cron por minuto o prefieres simplicidad, puedes
-> cambiar `QUEUE_CONNECTION=sync` en `.env` para enviar las notificaciones de
-> forma inmediata (sin cola), a costa de que la petición HTTP que generó la
-> anomalía tarde un poco más en responder.
+> Si en algún momento se prefiere volver a encolar (p. ej. porque el envío
+> síncrono empieza a hacer lenta la ingesta), cambia `QUEUE_CONNECTION=database`
+> y agrega de nuevo un cron para `php artisan queue:work --stop-when-empty
+> --max-time=...` con la misma granularidad que el scheduler.
 
 ## 7. Verificación post-despliegue
 
