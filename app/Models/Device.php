@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\DeviceFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,5 +75,30 @@ class Device extends Model
     public function dailyConsumptionSummaries(): HasMany
     {
         return $this->hasMany(DailyConsumptionSummary::class);
+    }
+
+    public function relayChannels(): HasMany
+    {
+        return $this->hasMany(DeviceRelayChannel::class)->orderBy('channel');
+    }
+
+    /**
+     * Garantiza que existan los 5 canales de relevador para este
+     * dispositivo (idempotente), con estado inicial "off". Se usa tanto
+     * al consultar/comandar desde el panel como cuando el ESP32 hace
+     * polling, para no depender de cuándo se creó el dispositivo.
+     *
+     * @return Collection<int, DeviceRelayChannel>
+     */
+    public function ensureRelayChannels(): Collection
+    {
+        for ($channel = 1; $channel <= 5; $channel++) {
+            $this->relayChannels()->firstOrCreate(
+                ['channel' => $channel],
+                ['label' => "Relevador {$channel}", 'desired_state' => 'off']
+            );
+        }
+
+        return $this->relayChannels()->get();
     }
 }

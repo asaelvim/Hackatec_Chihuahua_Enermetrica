@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ConsumptionReadingController;
 use App\Http\Controllers\Api\DailyConsumptionSummaryController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceModelController;
+use App\Http\Controllers\Api\DeviceRelayChannelController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\DeviceTypeController;
 use App\Http\Controllers\Api\ScheduleController;
@@ -17,6 +18,11 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::post('/devices/{device}/readings', [ConsumptionReadingController::class, 'store'])
     ->middleware('verify.device.token');
+
+Route::middleware('verify.device.token')->group(function () {
+    Route::get('/devices/{device}/relay-channels', [DeviceRelayChannelController::class, 'index']);
+    Route::post('/devices/{device}/relay-channels/{channel}/ack', [DeviceRelayChannelController::class, 'ack']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
