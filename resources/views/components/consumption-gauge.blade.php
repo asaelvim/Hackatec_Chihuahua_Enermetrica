@@ -1,10 +1,14 @@
 @props(['kwh', 'capacity'])
 
 @php
-    // El medidor usa como referencia la capacidad de los bloques Básico +
-    // Intermedio 1 + Intermedio 2 (ya prorrateada). Pasarse de ahí entra a
-    // Excedente, por eso el indicador se "satura" cerca del extremo rojo.
-    $percent = $capacity > 0 ? min(100, max(0, ($kwh / $capacity) * 100)) : 0;
+    // En el recibo real de CFE, el indicador no se satura al llenar los 3
+    // bloques normales (Básico+Intermedio1+Intermedio2): un consumo que ya
+    // incluye algo de Excedente todavía cae cerca de la mitad de la barra.
+    // Por eso usamos el doble de esa capacidad como referencia del 100%: así
+    // llenar los bloques normales (sin excedente) deja el indicador a la
+    // mitad, y solo un excedente considerable lo acerca al extremo rojo.
+    $scaleMax = $capacity * 2;
+    $percent = $scaleMax > 0 ? min(100, max(0, ($kwh / $scaleMax) * 100)) : 0;
 @endphp
 
 <div class="mt-4">
