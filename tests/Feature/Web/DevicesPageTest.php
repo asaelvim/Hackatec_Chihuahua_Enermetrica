@@ -60,4 +60,31 @@ class DevicesPageTest extends TestCase
         $this->assertSame('on', $esp32->fresh()->status);
         $this->assertSame('on', $relay->fresh()->status);
     }
+
+    public function test_toggling_a_device_on_flashes_a_success_message(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($user);
+
+        $device = Device::factory()->create(['status' => 'off']);
+
+        $component = Volt::test('pages.devices.index')->call('toggleStatus', $device->id);
+
+        $component->assertSee('se encendió correctamente');
+        $component->assertSee($device->name);
+        $this->assertSame('on', $device->fresh()->status);
+    }
+
+    public function test_toggling_an_untoggable_device_flashes_an_error_message(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($user);
+
+        $device = Device::factory()->create(['status' => 'offline']);
+
+        $component = Volt::test('pages.devices.index')->call('toggleStatus', $device->id);
+
+        $component->assertSee('No se pudo cambiar el estado');
+        $this->assertSame('offline', $device->fresh()->status);
+    }
 }

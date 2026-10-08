@@ -17,7 +17,7 @@ class extends Component
 
     public function setChartRange(string $range): void
     {
-        $this->chartRange = in_array($range, ['24h', '1h'], true) ? $range : '24h';
+        $this->chartRange = in_array($range, ['24h', '1h', '5m'], true) ? $range : '24h';
         $this->dispatch('dashboard-chart-updated', data: app(DashboardSummaryService::class)->consumptionChartData($this->chartRange));
     }
 
@@ -122,10 +122,17 @@ class extends Component
             <div class="flex items-center justify-between mb-3">
                 <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700">
                     <i class="fa-solid fa-chart-line text-indigo-600"></i>
-                    Consumo total — {{ $chartRange === '1h' ? 'última hora' : 'últimas 24 horas' }}
+                    Consumo total — {{ match($chartRange) { '5m' => 'últimos 5 minutos', '1h' => 'última hora', default => 'últimas 24 horas' } }}
                 </h3>
                 <div class="flex items-center gap-2">
                     <div class="inline-flex rounded-lg border border-gray-200 p-0.5 text-xs">
+                        <button
+                            type="button"
+                            wire:click="setChartRange('5m')"
+                            class="px-3 py-1 rounded-md transition-colors {{ $chartRange === '5m' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100' }}"
+                        >
+                            Últimos 5 min
+                        </button>
                         <button
                             type="button"
                             wire:click="setChartRange('1h')"

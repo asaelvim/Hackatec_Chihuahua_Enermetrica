@@ -45,4 +45,22 @@ class DashboardSummaryServiceTest extends TestCase
 
         $this->assertCount(24, $data['labels']);
     }
+
+    public function test_five_minute_range_returns_60_five_second_buckets_and_reflects_recent_readings(): void
+    {
+        $device = Device::factory()->create();
+
+        ConsumptionReading::factory()->create([
+            'device_id' => $device->id,
+            'value' => 600,
+            'read_at' => Carbon::now()->subSeconds(10),
+        ]);
+
+        $data = app(DashboardSummaryService::class)->consumptionChartData('5m');
+
+        $this->assertCount(60, $data['labels']);
+        $this->assertCount(60, $data['datasets'][0]['data']);
+        $this->assertEquals('Consumo promedio (kW) — últimos 5 minutos', $data['datasets'][0]['label']);
+        $this->assertGreaterThan(0, array_sum($data['datasets'][0]['data']));
+    }
 }

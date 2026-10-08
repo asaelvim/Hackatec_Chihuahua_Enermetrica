@@ -71,16 +71,21 @@ class DashboardSummaryService
     }
 
     /**
-     * Datos de la gráfica de consumo total. Soporta dos rangos:
+     * Datos de la gráfica de consumo total. Soporta tres rangos:
      * - '24h' (por defecto): 24 cubetas de una hora cada una.
      * - '1h': 60 cubetas de un minuto cada una, para notar variaciones
      *   recientes (p.ej. el simulador en vivo) que una vista de 24h diluye.
+     * - '5m': 60 cubetas de 5 segundos cada una (la misma cadencia con la
+     *   que el simulador genera lecturas), para ver subidas/bajadas casi
+     *   en tiempo real.
      */
     public function consumptionChartData(string $range = '24h'): array
     {
-        return $range === '1h'
-            ? $this->consumptionChartDataForLastHour()
-            : $this->consumptionChartDataForLast24Hours();
+        return match ($range) {
+            '5m' => $this->consumptionChartDataForLast5Minutes(),
+            '1h' => $this->consumptionChartDataForLastHour(),
+            default => $this->consumptionChartDataForLast24Hours(),
+        };
     }
 
     private function consumptionChartDataForLast24Hours(): array
@@ -125,6 +130,32 @@ class DashboardSummaryService
         }
 
         return $this->buildChartPayload($labels, $data, 'Consumo promedio (kW) — última hora');
+    }
+
+    private function consumptionChartDataForLast5Minutes(): array
+    {
+        $bucketSeconds = 5;
+        $buckets = 60; // 60 cubetas de 5s = 5 minutos
+
+        $start = Carbon::now()->subSeconds($bucketSeconds * ($buckets - 1));
+        $startBucketTs = intdiv($start->timestamp, $bucketSeconds) * $bucketSeconds;
+
+        $readings = ConsumptionReading::query()
+            ->selectRaw('CAST(FLOOR(UNIX_TIMESTAMP(read_at) / ?) * ? AS UNSIGNED) as bucket_ts, AVG(value) as average', [$bucketSeconds, $bucketSeconds])
+            ->where('read_at', '>=', $start)
+            ->groupBy('bucket_ts')
+            ->pluck('average', 'bucket_ts');
+
+        $labels = [];
+        $data = [];
+
+        for ($i = 0; $i < $buckets; $i++) {
+            $ts = $startBucketTs + $i * $bucketSeconds;
+            $labels[] = Carbon::createFromTimestamp($ts, config('app.timezone'))->format('H:i:s');
+            $data[] = round((float) ($readings[(string) $ts] ?? $readings[$ts] ?? 0) / 1000, 3);
+        }
+
+        return $this->buildChartPayload($labels, $data, 'Consumo promedio (kW) — últimos 5 minutos');
     }
 
     private function buildChartPayload(array $labels, array $data, string $label): array

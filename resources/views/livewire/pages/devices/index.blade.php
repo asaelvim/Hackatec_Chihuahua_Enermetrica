@@ -127,7 +127,25 @@ class extends Component
      */
     public function toggleStatus(int $deviceId): void
     {
-        Device::findOrFail($deviceId)->toggleStatus(auth()->user());
+        $device = Device::findOrFail($deviceId);
+
+        if (! $device->toggleStatus(auth()->user())) {
+            session()->flash('toggleMessage', [
+                'text' => "No se pudo cambiar el estado de \"{$device->name}\".",
+                'type' => 'error',
+            ]);
+
+            return;
+        }
+
+        $device->refresh();
+
+        session()->flash('toggleMessage', [
+            'text' => $device->status === 'on'
+                ? "\"{$device->name}\" se encendió correctamente."
+                : "\"{$device->name}\" se apagó correctamente.",
+            'type' => $device->status === 'on' ? 'success' : 'neutral',
+        ]);
     }
 }; ?>
 
@@ -146,6 +164,25 @@ class extends Component
         @if (session('status'))
             <div class="rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3">
                 {{ session('status') }}
+            </div>
+        @endif
+
+        @if (session('toggleMessage'))
+            @php($toggleMessage = session('toggleMessage'))
+            <div
+                x-data="{ show: true }"
+                x-show="show"
+                x-init="setTimeout(() => show = false, 4000)"
+                x-transition
+                class="rounded-md border text-sm px-4 py-3 flex items-center gap-2
+                    {{ match ($toggleMessage['type']) {
+                        'success' => 'bg-emerald-50 border-emerald-200 text-emerald-700',
+                        'error' => 'bg-red-50 border-red-200 text-red-700',
+                        default => 'bg-gray-50 border-gray-200 text-gray-700',
+                    } }}"
+            >
+                <i class="fa-solid {{ $toggleMessage['type'] === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check' }}"></i>
+                {{ $toggleMessage['text'] }}
             </div>
         @endif
 
