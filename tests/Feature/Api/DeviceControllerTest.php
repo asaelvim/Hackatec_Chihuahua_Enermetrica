@@ -87,4 +87,20 @@ class DeviceControllerTest extends TestCase
         $response->assertOk();
         $this->assertSame('off', $relay->fresh()->status);
     }
+
+    public function test_updating_the_controller_to_on_turns_on_its_relay_devices(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $esp32 = Device::factory()->create(['status' => 'off']);
+        $relay = Device::factory()->controlledBy($esp32, 1)->create(['status' => 'off']);
+
+        $response = $this->putJson("/api/devices/{$esp32->id}", [
+            'name' => $esp32->name,
+            'area_id' => $esp32->area_id,
+            'status' => 'on',
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('on', $relay->fresh()->status);
+    }
 }

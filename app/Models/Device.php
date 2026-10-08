@@ -142,9 +142,76 @@ class Device extends Model
     }
 
     /**
+     * Enciende (status = on) los dispositivos que este controla a través
+     * de sus relevadores y que actualmente estén apagados. Se usa cuando
+     * este dispositivo (normalmente el ESP32) pasa a estar "on".
+     * No toca los que estén "offline"/"maintenance" (esos se cambian
+     * forzosamente solo desde Editar).
+     */
+    public function turnOnControlledRelayDevices(?User $actor = null): void
+    {
+        $this->relayDevices()
+            ->where('status', 'off')
+            ->get()
+            ->each(fn (Device $relayDevice) => $relayDevice->update([
+                'status' => 'on',
+                'commanded_at' => now(),
+                'commanded_by' => $actor?->id,
+            ]));
+    }
+
+    /**
+     * Si este dispositivo es un relevador y su controlador (el ESP32)
+     * está "off", lo enciende también: el controlador se considera "on"
+     * en cuanto al menos uno de sus relevadores está encendido.
+     */
+    protected function syncControllerOnAfterTurningOn(): void
+    {
+        if (! $this->isRelayControlled()) {
+            return;
+        }
+
+        $controller = $this->controller;
+
+        if ($controller && $controller->status === 'off') {
+            $controller->update(['status' => 'on']);
+        }
+    }
+
+    /**
+     * Si este dispositivo es un relevador y, tras apagarlo, ya ninguno de
+     * los relevadores de su controlador (el ESP32) sigue encendido, apaga
+     * también al controlador.
+     */
+    protected function syncControllerOffAfterTurningOff(): void
+    {
+        if (! $this->isRelayControlled()) {
+            return;
+        }
+
+        $controller = $this->controller;
+
+        if (! $controller || $controller->status !== 'on') {
+            return;
+        }
+
+        $algunoEncendido = $controller->relayDevices()->where('status', 'on')->exists();
+
+        if (! $algunoEncendido) {
+            $controller->update(['status' => 'off']);
+        }
+    }
+
+    /**
      * Enciende/apaga con un clic (desde el panel web o la app móvil).
      * No hace nada si el estado actual es "offline"/"maintenance" (esos
      * solo se cambian forzosamente desde Editar). Devuelve si se aplicó.
+     *
+     * Mantiene sincronizado el estado del ESP32 con sus relevadores: al
+     * encender el ESP32 se encienden todos sus relevadores, al apagarlo
+     * se apagan todos; y si se enciende/apaga un relevador individual, el
+     * ESP32 se enciende (si estaba apagado) o se apaga (si era el último
+     * relevador encendido), respectivamente.
      */
     public function toggleStatus(?User $actor = null): bool
     {
@@ -161,8 +228,14 @@ class Device extends Model
                 : []
         ));
 
-        if ($newStatus !== 'on') {
-            $this->turnOffControlledRelayDevices($actor);
+        if ($this->isRelayControlled()) {
+            $newStatus === 'on'
+                ? $this->syncControllerOnAfterTurningOn()
+                : $this->syncControllerOffAfterTurningOff();
+        } else {
+            $newStatus === 'on'
+                ? $this->turnOnControlledRelayDevices($actor)
+                : $this->turnOffControlledRelayDevices($actor);
         }
 
         return true;

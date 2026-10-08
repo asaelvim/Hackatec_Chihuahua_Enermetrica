@@ -96,6 +96,8 @@ class extends Component
 
         if ($previousStatus === 'on' && $device->status !== 'on') {
             $device->turnOffControlledRelayDevices(auth()->user());
+        } elseif ($previousStatus !== 'on' && $device->status === 'on') {
+            $device->turnOnControlledRelayDevices(auth()->user());
         }
 
         $this->showModal = false;

@@ -43,4 +43,21 @@ class DevicesPageTest extends TestCase
         $this->assertSame('offline', $esp32->fresh()->status);
         $this->assertSame('off', $relay->fresh()->status);
     }
+
+    public function test_editing_the_controller_to_on_turns_on_its_relay_devices(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($user);
+
+        $esp32 = Device::factory()->create(['status' => 'off']);
+        $relay = Device::factory()->controlledBy($esp32, 1)->create(['status' => 'off']);
+
+        Volt::test('pages.devices.index')
+            ->call('edit', $esp32->id)
+            ->set('status', 'on')
+            ->call('save');
+
+        $this->assertSame('on', $esp32->fresh()->status);
+        $this->assertSame('on', $relay->fresh()->status);
+    }
 }

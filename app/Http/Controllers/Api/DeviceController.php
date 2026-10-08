@@ -50,6 +50,8 @@ class DeviceController extends Controller
 
         if ($previousStatus === 'on' && $device->status !== 'on') {
             $device->turnOffControlledRelayDevices($request->user());
+        } elseif ($previousStatus !== 'on' && $device->status === 'on') {
+            $device->turnOnControlledRelayDevices($request->user());
         }
 
         return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel', 'controller']));
