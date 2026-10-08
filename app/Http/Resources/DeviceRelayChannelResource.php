@@ -15,10 +15,12 @@ class DeviceRelayChannelResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'channel' => $this->channel,
-            'label' => $this->label,
-            'desired_state' => $this->desired_state,
-            'reported_state' => $this->reported_state,
+            'channel' => $this->relay_channel,
+            'label' => $this->name,
+            // Si el dispositivo esta offline/mantenimiento se le pide al
+            // ESP32 que lo deje apagado, aunque "status" guarde ese valor.
+            'desired_state' => in_array($this->status, ['on', 'off'], true) ? $this->status : 'off',
+            'reported_state' => $this->reported_status,
             'commanded_at' => $this->commanded_at,
             'reported_at' => $this->reported_at,
         ];

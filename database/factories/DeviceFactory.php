@@ -29,4 +29,16 @@ class DeviceFactory extends Factory
             'last_reading_at' => fake()->dateTimeBetween('-1 hour', 'now'),
         ];
     }
+
+    /**
+     * Marca este dispositivo como controlado por el relevador $channel
+     * (1-5) del dispositivo $controller (normalmente el ESP32).
+     */
+    public function controlledBy(Device $controller, int $channel): static
+    {
+        return $this->state(fn () => [
+            'controller_device_id' => $controller->id,
+            'relay_channel' => $channel,
+        ]);
+    }
 }

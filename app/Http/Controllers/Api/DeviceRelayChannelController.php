@@ -17,11 +17,12 @@ use Illuminate\Http\JsonResponse;
 class DeviceRelayChannelController extends Controller
 {
     /**
-     * Lista el estado deseado de los 5 canales de este dispositivo.
+     * Lista el estado deseado de los dispositivos controlados por los 5
+     * relevadores de este dispositivo.
      */
     public function index(Device $device)
     {
-        return DeviceRelayChannelResource::collection($device->ensureRelayChannels());
+        return DeviceRelayChannelResource::collection($device->relayDevices);
     }
 
     /**
@@ -29,18 +30,18 @@ class DeviceRelayChannelController extends Controller
      */
     public function ack(AckDeviceRelayChannelRequest $request, Device $device, int $channel): JsonResponse
     {
-        $relayChannel = $device->ensureRelayChannels()->firstWhere('channel', $channel);
+        $relayDevice = $device->relayDevices()->where('relay_channel', $channel)->first();
 
-        if (! $relayChannel) {
+        if (! $relayDevice) {
             abort(404, 'Canal de relevador inválido.');
         }
 
-        $relayChannel->update([
-            'reported_state' => $request->input('state'),
+        $relayDevice->update([
+            'reported_status' => $request->input('state'),
             'reported_at' => now(),
         ]);
 
-        return (new DeviceRelayChannelResource($relayChannel))
+        return (new DeviceRelayChannelResource($relayDevice))
             ->response()
             ->setStatusCode(200);
     }
