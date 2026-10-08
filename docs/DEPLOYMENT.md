@@ -113,8 +113,8 @@ chmod -R 775 storage bootstrap/cache
 DreamHost no soporta procesos persistentes (`queue:work` como demonio), así
 que todo se ejecuta vía cron cada minuto:
 
-**Scheduler de Laravel** (ejecuta los jobs `SummarizeDailyConsumption` y
-`MarkOfflineDevices` definidos en `routes/console.php`):
+**Scheduler de Laravel** (ejecuta los jobs `SummarizeDailyConsumption`,
+`MarkOfflineDevices` y `SimulateLiveReadings` definidos en `routes/console.php`):
 
 ```
 * * * * * cd /home/tu-usuario/enermetrica-app && php artisan schedule:run >> /dev/null 2>&1
