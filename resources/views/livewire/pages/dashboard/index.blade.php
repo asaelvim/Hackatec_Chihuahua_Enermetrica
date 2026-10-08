@@ -3,7 +3,9 @@
 use App\Models\Anomaly;
 use App\Models\Area;
 use App\Models\ConsumptionReading;
+use App\Models\DailyConsumptionSummary;
 use App\Models\Device;
+use App\Services\CfeTariffCalculator;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -24,6 +26,42 @@ class extends Component
             'topDevices' => $this->topDevices(),
             'recentAnomalies' => Anomaly::with('device')->latest('id')->limit(5)->get(),
             'areaBreakdown' => Area::withCount('devices')->orderByDesc('devices_count')->get(),
+            'monthlyCost' => $this->monthlyCostEstimate(),
+        ];
+    }
+
+    /**
+     * Costo estimado (aproximado, tarifa CFE residencial) del mes en curso:
+     * lo acumulado hasta hoy y una proyección a fin de mes basada en el
+     * promedio diario de consumo observado.
+     *
+     * @return array{accumulated: float, projected: float, daysElapsed: int, daysInMonth: int}
+     */
+    private function monthlyCostEstimate(): array
+    {
+        $today = Carbon::now();
+        $monthStart = $today->copy()->startOfMonth();
+        $monthEnd = $today->copy()->endOfMonth();
+
+        $kwhSoFar = (float) DailyConsumptionSummary::query()
+            ->whereBetween('date', [$monthStart->toDateString(), $today->toDateString()])
+            ->sum('total_kwh');
+
+        $calculator = new CfeTariffCalculator;
+
+        $accumulated = $calculator->estimate($kwhSoFar, $monthStart, $today)['total'];
+
+        $daysElapsed = $today->day;
+        $daysInMonth = $monthStart->daysInMonth;
+        $projectedKwh = $daysElapsed > 0 ? ($kwhSoFar / $daysElapsed) * $daysInMonth : 0.0;
+
+        $projected = $calculator->estimate($projectedKwh, $monthStart, $monthEnd)['total'];
+
+        return [
+            'accumulated' => $accumulated,
+            'projected' => $projected,
+            'daysElapsed' => $daysElapsed,
+            'daysInMonth' => $daysInMonth,
         ];
     }
 
@@ -148,6 +186,27 @@ class extends Component
                 <a href="{{ route('web.anomalies.index') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </x-card>
         </div>
+
+        <x-card>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <i class="fa-solid fa-sack-dollar text-indigo-600"></i>
+                    Costo estimado del mes en curso
+                </h3>
+                <a href="{{ route('web.statistics.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">Acumulado a hoy (día {{ $monthlyCost['daysElapsed'] }} de {{ $monthlyCost['daysInMonth'] }})</p>
+                    <p class="text-2xl font-semibold text-gray-800 mt-1">${{ number_format($monthlyCost['accumulated'], 2) }} MXN</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">Proyección a fin de mes</p>
+                    <p class="text-2xl font-semibold text-indigo-600 mt-1">${{ number_format($monthlyCost['projected'], 2) }} MXN</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">Estimación aproximada con la tarifa residencial de CFE para Baja California. No sustituye tu recibo oficial.</p>
+        </x-card>
 
         <x-card>
             <div class="flex items-center justify-between mb-3">

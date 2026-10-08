@@ -2,6 +2,7 @@
 
 use App\Models\DailyConsumptionSummary;
 use App\Models\Device;
+use App\Services\CfeTariffCalculator;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -54,12 +55,19 @@ class extends Component
 
         $maxDaily = (float) ($summaries->max('total_kwh') ?: 1);
 
+        $estimatedCost = (new CfeTariffCalculator)->estimate(
+            (float) ($totals->total_kwh ?? 0),
+            Carbon::parse($this->from ?: Carbon::now()->subDays(6)),
+            Carbon::parse($this->to ?: Carbon::now()),
+        );
+
         return [
             'summaries' => $summaries,
             'totals' => $totals,
             'maxDaily' => $maxDaily,
             'devices' => Device::orderBy('name')->get(),
             'chartData' => $this->chartData(),
+            'estimatedCost' => $estimatedCost,
         ];
     }
 
@@ -131,6 +139,41 @@ class extends Component
                 <p class="text-2xl font-semibold text-gray-800 mt-1">{{ number_format((float) ($totals->max_watts ?? 0) / 1000, 2) }} kW</p>
             </x-card>
         </div>
+
+        <x-card>
+            <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <i class="fa-solid fa-sack-dollar text-indigo-600"></i>
+                Costo estimado del periodo ({{ $estimatedCost['season'] }})
+            </h3>
+            <p class="text-3xl font-semibold text-gray-800">${{ number_format($estimatedCost['total'], 2) }} MXN</p>
+            <div class="overflow-x-auto mt-4">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead>
+                        <tr>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bloque</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">kWh</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Precio ($/kWh)</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse ($estimatedCost['breakdown'] as $block)
+                            <tr>
+                                <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ $block['label'] }}</td>
+                                <td class="px-2 py-2 text-sm text-gray-500 text-right">{{ number_format($block['kwh'], 2) }}</td>
+                                <td class="px-2 py-2 text-sm text-gray-500 text-right">{{ number_format($block['rate'], 3) }}</td>
+                                <td class="px-2 py-2 text-sm text-gray-500 text-right">${{ number_format($block['subtotal'], 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="px-2 py-6 text-center text-sm text-gray-400">Sin consumo en el rango seleccionado.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-gray-400 mt-3">Estimación aproximada con la tarifa residencial de CFE para Baja California. No sustituye tu recibo oficial.</p>
+        </x-card>
 
         <x-card>
             <h3 class="text-sm font-medium text-gray-700 mb-3">Consumo diario en el rango seleccionado</h3>
