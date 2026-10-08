@@ -8,14 +8,22 @@ new
 #[Layout('layouts.app')]
 class extends Component
 {
+    public string $chartRange = '24h';
+
     public function with(): array
     {
-        return app(DashboardSummaryService::class)->summary();
+        return app(DashboardSummaryService::class)->summary($this->chartRange);
+    }
+
+    public function setChartRange(string $range): void
+    {
+        $this->chartRange = in_array($range, ['24h', '1h'], true) ? $range : '24h';
+        $this->dispatch('dashboard-chart-updated', data: app(DashboardSummaryService::class)->consumptionChartData($this->chartRange));
     }
 
     public function poll(): void
     {
-        $this->dispatch('dashboard-chart-updated', data: app(DashboardSummaryService::class)->consumptionChartData());
+        $this->dispatch('dashboard-chart-updated', data: app(DashboardSummaryService::class)->consumptionChartData($this->chartRange));
     }
 }; ?>
 
@@ -114,9 +122,27 @@ class extends Component
             <div class="flex items-center justify-between mb-3">
                 <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700">
                     <i class="fa-solid fa-chart-line text-indigo-600"></i>
-                    Consumo total — últimas 24 horas
+                    Consumo total — {{ $chartRange === '1h' ? 'última hora' : 'últimas 24 horas' }}
                 </h3>
-                <a href="{{ route('web.statistics.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
+                <div class="flex items-center gap-2">
+                    <div class="inline-flex rounded-lg border border-gray-200 p-0.5 text-xs">
+                        <button
+                            type="button"
+                            wire:click="setChartRange('1h')"
+                            class="px-3 py-1 rounded-md transition-colors {{ $chartRange === '1h' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100' }}"
+                        >
+                            Última hora
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="setChartRange('24h')"
+                            class="px-3 py-1 rounded-md transition-colors {{ $chartRange === '24h' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100' }}"
+                        >
+                            Últimas 24h
+                        </button>
+                    </div>
+                    <a href="{{ route('web.statistics.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
+                </div>
             </div>
             <div wire:ignore x-data="initLineChart(@js($chartData), 'dashboard-chart-updated')" class="h-64">
                 <canvas x-ref="canvas"></canvas>

@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  */
 class DashboardSummaryService
 {
-    public function summary(): array
+    public function summary(string $chartRange = '24h'): array
     {
         return [
             'totalDevices' => Device::count(),
@@ -25,7 +25,7 @@ class DashboardSummaryService
             'offlineDevices' => Device::where('status', 'offline')->count(),
             'maintenanceDevices' => Device::where('status', 'maintenance')->count(),
             'pendingAnomalies' => Anomaly::whereNull('reviewed_at')->count(),
-            'chartData' => $this->consumptionChartData(),
+            'chartData' => $this->consumptionChartData($chartRange),
             'topDevices' => $this->topDevices(),
             'recentAnomalies' => Anomaly::with('device')->latest('id')->limit(5)->get(),
             'areaBreakdown' => Area::withCount('devices')->orderByDesc('devices_count')->get(),
@@ -70,7 +70,20 @@ class DashboardSummaryService
         ];
     }
 
-    public function consumptionChartData(): array
+    /**
+     * Datos de la gráfica de consumo total. Soporta dos rangos:
+     * - '24h' (por defecto): 24 cubetas de una hora cada una.
+     * - '1h': 60 cubetas de un minuto cada una, para notar variaciones
+     *   recientes (p.ej. el simulador en vivo) que una vista de 24h diluye.
+     */
+    public function consumptionChartData(string $range = '24h'): array
+    {
+        return $range === '1h'
+            ? $this->consumptionChartDataForLastHour()
+            : $this->consumptionChartDataForLast24Hours();
+    }
+
+    private function consumptionChartDataForLast24Hours(): array
     {
         $start = Carbon::now()->subHours(23)->startOfHour();
 
@@ -89,10 +102,37 @@ class DashboardSummaryService
             $data[] = round((float) ($readings[$hour->format('Y-m-d H:00:00')] ?? 0) / 1000, 3);
         }
 
+        return $this->buildChartPayload($labels, $data, 'Consumo total (kW) — últimas 24h');
+    }
+
+    private function consumptionChartDataForLastHour(): array
+    {
+        $start = Carbon::now()->subMinutes(59)->startOfMinute();
+
+        $readings = ConsumptionReading::query()
+            ->selectRaw('DATE_FORMAT(read_at, "%Y-%m-%d %H:%i:00") as bucket, AVG(value) as average')
+            ->where('read_at', '>=', $start)
+            ->groupBy('bucket')
+            ->pluck('average', 'bucket');
+
+        $labels = [];
+        $data = [];
+
+        for ($i = 0; $i < 60; $i++) {
+            $minute = $start->copy()->addMinutes($i);
+            $labels[] = $minute->format('H:i');
+            $data[] = round((float) ($readings[$minute->format('Y-m-d H:i:00')] ?? 0) / 1000, 3);
+        }
+
+        return $this->buildChartPayload($labels, $data, 'Consumo promedio (kW) — última hora');
+    }
+
+    private function buildChartPayload(array $labels, array $data, string $label): array
+    {
         return [
             'labels' => $labels,
             'datasets' => [[
-                'label' => 'Consumo total (kW)',
+                'label' => $label,
                 'data' => $data,
                 'borderColor' => '#2563eb',
                 'backgroundColor' => 'rgba(37, 99, 235, 0.15)',
