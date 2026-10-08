@@ -17,7 +17,7 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')->getJson('/api/dashboard');
 
         $response->assertOk();
-        $this->assertCount(24, $response->json('chartData.labels'));
+        $this->assertCount(23, $response->json('chartData.labels'));
     }
 
     public function test_it_returns_a_60_minute_chart_when_range_is_1h(): void
@@ -27,6 +27,6 @@ class DashboardControllerTest extends TestCase
         $response = $this->actingAs($user, 'sanctum')->getJson('/api/dashboard?range=1h');
 
         $response->assertOk();
-        $this->assertCount(60, $response->json('chartData.labels'));
+        $this->assertCount(59, $response->json('chartData.labels'));
     }
 }

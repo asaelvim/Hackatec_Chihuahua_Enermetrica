@@ -107,6 +107,8 @@ class DashboardSummaryService
             $data[] = round((float) ($readings[$hour->format('Y-m-d H:00:00')] ?? 0) / 1000, 3);
         }
 
+        [$labels, $data] = $this->dropIncompleteLastBucket($labels, $data);
+
         return $this->buildChartPayload($labels, $data, 'Consumo total (kW) — últimas 24h');
     }
 
@@ -128,6 +130,8 @@ class DashboardSummaryService
             $labels[] = $minute->format('H:i');
             $data[] = round((float) ($readings[$minute->format('Y-m-d H:i:00')] ?? 0) / 1000, 3);
         }
+
+        [$labels, $data] = $this->dropIncompleteLastBucket($labels, $data);
 
         return $this->buildChartPayload($labels, $data, 'Consumo promedio (kW) — última hora');
     }
@@ -160,7 +164,29 @@ class DashboardSummaryService
             $data[] = round((float) ($readings[$moment->format('Y-m-d H:i:s')] ?? 0) / 1000, 3);
         }
 
+        [$labels, $data] = $this->dropIncompleteLastBucket($labels, $data);
+
         return $this->buildChartPayload($labels, $data, 'Consumo promedio (kW) — últimos 5 minutos');
+    }
+
+    /**
+     * La última cubeta representa el instante más reciente ("ahora"), cuya
+     * lectura normalmente todavía no ha llegado a la base de datos cuando se
+     * arma la gráfica (llega unos segundos después, en la siguiente
+     * actualización). Sin esto, la gráfica siempre terminaba con un punto en
+     * 0 que se "corregía" solo hasta el siguiente refresco. Se omite ese
+     * último punto para que la gráfica siempre termine en una lectura real.
+     *
+     * @return array{0: array, 1: array}
+     */
+    private function dropIncompleteLastBucket(array $labels, array $data): array
+    {
+        if (count($labels) > 1) {
+            array_pop($labels);
+            array_pop($data);
+        }
+
+        return [$labels, $data];
     }
 
     private function buildChartPayload(array $labels, array $data, string $label): array

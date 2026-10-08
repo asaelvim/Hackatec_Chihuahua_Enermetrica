@@ -13,15 +13,15 @@ class DashboardSummaryServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_default_chart_range_returns_24_hourly_buckets(): void
+    public function test_default_chart_range_returns_23_hourly_buckets_excluding_the_in_progress_hour(): void
     {
         $data = app(DashboardSummaryService::class)->consumptionChartData();
 
-        $this->assertCount(24, $data['labels']);
-        $this->assertCount(24, $data['datasets'][0]['data']);
+        $this->assertCount(23, $data['labels']);
+        $this->assertCount(23, $data['datasets'][0]['data']);
     }
 
-    public function test_one_hour_range_returns_60_minute_buckets_and_reflects_recent_readings(): void
+    public function test_one_hour_range_returns_59_minute_buckets_and_reflects_recent_readings(): void
     {
         $device = Device::factory()->create();
 
@@ -33,8 +33,8 @@ class DashboardSummaryServiceTest extends TestCase
 
         $data = app(DashboardSummaryService::class)->consumptionChartData('1h');
 
-        $this->assertCount(60, $data['labels']);
-        $this->assertCount(60, $data['datasets'][0]['data']);
+        $this->assertCount(59, $data['labels']);
+        $this->assertCount(59, $data['datasets'][0]['data']);
         $this->assertEquals('Consumo promedio (kW) — última hora', $data['datasets'][0]['label']);
         $this->assertGreaterThan(0, array_sum($data['datasets'][0]['data']));
     }
@@ -43,10 +43,10 @@ class DashboardSummaryServiceTest extends TestCase
     {
         $data = app(DashboardSummaryService::class)->consumptionChartData('invalid');
 
-        $this->assertCount(24, $data['labels']);
+        $this->assertCount(23, $data['labels']);
     }
 
-    public function test_five_minute_range_returns_60_five_second_buckets_and_reflects_recent_readings(): void
+    public function test_five_minute_range_returns_59_five_second_buckets_and_reflects_recent_readings(): void
     {
         $device = Device::factory()->create();
 
@@ -58,8 +58,8 @@ class DashboardSummaryServiceTest extends TestCase
 
         $data = app(DashboardSummaryService::class)->consumptionChartData('5m');
 
-        $this->assertCount(60, $data['labels']);
-        $this->assertCount(60, $data['datasets'][0]['data']);
+        $this->assertCount(59, $data['labels']);
+        $this->assertCount(59, $data['datasets'][0]['data']);
         $this->assertEquals('Consumo promedio (kW) — últimos 5 minutos', $data['datasets'][0]['label']);
         $this->assertGreaterThan(0, array_sum($data['datasets'][0]['data']));
     }
