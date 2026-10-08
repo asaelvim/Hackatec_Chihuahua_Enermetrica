@@ -55,9 +55,14 @@ class extends Component
             ]],
         ];
     }
+
+    public function poll(): void
+    {
+        $this->dispatch('dashboard-chart-updated', data: $this->consumptionChartData());
+    }
 }; ?>
 
-<div>
+<div wire:poll.5s="poll">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800">Dashboard</h2>
     </x-slot>
@@ -88,7 +93,7 @@ class extends Component
 
         <x-card>
             <h3 class="text-sm font-medium text-gray-700 mb-3">Consumo total — últimas 24 horas</h3>
-            <div wire:ignore x-data="initLineChart(@js($chartData))" class="h-64">
+            <div wire:ignore x-data="initLineChart(@js($chartData), 'dashboard-chart-updated')" class="h-64">
                 <canvas x-ref="canvas"></canvas>
             </div>
         </x-card>

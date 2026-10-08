@@ -39,7 +39,7 @@ window.initLineChart = function (initialData, eventName) {
                         }
                     });
                     chart.data.datasets.length = data.datasets.length;
-                    chart.update();
+                    chart.update('none');
                 });
             }
         },

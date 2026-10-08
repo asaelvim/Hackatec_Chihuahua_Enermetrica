@@ -31,6 +31,11 @@ class extends Component
         $this->dispatch('statistics-chart-updated', data: $this->chartData());
     }
 
+    public function poll(): void
+    {
+        $this->dispatch('statistics-chart-updated', data: $this->chartData());
+    }
+
     public function with(): array
     {
         $summaries = DailyConsumptionSummary::with('device')
@@ -84,7 +89,7 @@ class extends Component
     }
 }; ?>
 
-<div>
+<div wire:poll.5s="poll">
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800">Estadísticas de consumo</h2>
     </x-slot>
