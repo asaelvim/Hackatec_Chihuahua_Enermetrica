@@ -138,21 +138,26 @@ class DashboardSummaryService
         $buckets = 60; // 60 cubetas de 5s = 5 minutos
 
         $start = Carbon::now()->subSeconds($bucketSeconds * ($buckets - 1));
-        $startBucketTs = intdiv($start->timestamp, $bucketSeconds) * $bucketSeconds;
+        $start->subSeconds($start->second % $bucketSeconds)->startOfSecond();
 
+        // Igual que las demás vistas, agrupamos comparando el valor literal
+        // guardado en read_at (sin pasar por UNIX_TIMESTAMP, que depende de
+        // la zona horaria de SESIÓN de MySQL y puede no coincidir con la de
+        // la app en hosting compartido, dejando esta gráfica siempre en 0
+        // aunque las lecturas sí existan).
         $readings = ConsumptionReading::query()
-            ->selectRaw('CAST(FLOOR(UNIX_TIMESTAMP(read_at) / ?) * ? AS UNSIGNED) as bucket_ts, AVG(value) as average', [$bucketSeconds, $bucketSeconds])
+            ->selectRaw('DATE_FORMAT(DATE_SUB(read_at, INTERVAL (SECOND(read_at) MOD ?) SECOND), "%Y-%m-%d %H:%i:%s") as bucket, AVG(value) as average', [$bucketSeconds])
             ->where('read_at', '>=', $start)
-            ->groupBy('bucket_ts')
-            ->pluck('average', 'bucket_ts');
+            ->groupBy('bucket')
+            ->pluck('average', 'bucket');
 
         $labels = [];
         $data = [];
 
         for ($i = 0; $i < $buckets; $i++) {
-            $ts = $startBucketTs + $i * $bucketSeconds;
-            $labels[] = Carbon::createFromTimestamp($ts, config('app.timezone'))->format('H:i:s');
-            $data[] = round((float) ($readings[(string) $ts] ?? $readings[$ts] ?? 0) / 1000, 3);
+            $moment = $start->copy()->addSeconds($i * $bucketSeconds);
+            $labels[] = $moment->format('H:i:s');
+            $data[] = round((float) ($readings[$moment->format('Y-m-d H:i:s')] ?? 0) / 1000, 3);
         }
 
         return $this->buildChartPayload($labels, $data, 'Consumo promedio (kW) — últimos 5 minutos');

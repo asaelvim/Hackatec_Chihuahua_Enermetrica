@@ -174,7 +174,7 @@ class extends Component
                 x-show="show"
                 x-init="setTimeout(() => show = false, 4000)"
                 x-transition
-                class="rounded-md border text-sm px-4 py-3 flex items-center gap-2
+                class="fixed bottom-6 right-6 z-50 max-w-sm rounded-md border shadow-lg text-sm px-4 py-3 flex items-center gap-2
                     {{ match ($toggleMessage['type']) {
                         'success' => 'bg-emerald-50 border-emerald-200 text-emerald-700',
                         'error' => 'bg-red-50 border-red-200 text-red-700',
