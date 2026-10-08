@@ -58,6 +58,7 @@ class CfeTariffCalculator
      *     total: float,
      *     season: string,
      *     breakdown: array<int, array{label: string, kwh: float, rate: float, subtotal: float}>,
+     *     capacity: float,
      * }
      */
     public function estimate(float $kwh, Carbon $periodStart, Carbon $periodEnd): array
@@ -114,6 +115,7 @@ class CfeTariffCalculator
             'total' => round($total, 2),
             'season' => $isSummer ? 'Verano' : 'Resto del año',
             'breakdown' => $breakdown,
+            'capacity' => round(array_sum(array_column($tariff['blocks'], 'limit')) * $factor, 2),
         ];
     }
 

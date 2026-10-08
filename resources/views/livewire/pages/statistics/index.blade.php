@@ -173,6 +173,7 @@ class extends Component
                 </table>
             </div>
             <p class="text-xs text-gray-400 mt-3">Estimación aproximada con la tarifa residencial de CFE para Baja California. No sustituye tu recibo oficial.</p>
+            <x-consumption-gauge :kwh="(float) ($totals->total_kwh ?? 0)" :capacity="$estimatedCost['capacity']" />
         </x-card>
 
         <x-card>

@@ -35,7 +35,7 @@ class extends Component
      * lo acumulado hasta hoy y una proyección a fin de mes basada en el
      * promedio diario de consumo observado.
      *
-     * @return array{accumulated: float, projected: float, daysElapsed: int, daysInMonth: int}
+     * @return array{accumulated: float, projected: float, daysElapsed: int, daysInMonth: int, projectedKwh: float, projectedCapacity: float}
      */
     private function monthlyCostEstimate(): array
     {
@@ -55,13 +55,15 @@ class extends Component
         $daysInMonth = $monthStart->daysInMonth;
         $projectedKwh = $daysElapsed > 0 ? ($kwhSoFar / $daysElapsed) * $daysInMonth : 0.0;
 
-        $projected = $calculator->estimate($projectedKwh, $monthStart, $monthEnd)['total'];
+        $projectedEstimate = $calculator->estimate($projectedKwh, $monthStart, $monthEnd);
 
         return [
             'accumulated' => $accumulated,
-            'projected' => $projected,
+            'projected' => $projectedEstimate['total'],
             'daysElapsed' => $daysElapsed,
             'daysInMonth' => $daysInMonth,
+            'projectedKwh' => $projectedKwh,
+            'projectedCapacity' => $projectedEstimate['capacity'],
         ];
     }
 
@@ -206,6 +208,7 @@ class extends Component
                 </div>
             </div>
             <p class="text-xs text-gray-400 mt-3">Estimación aproximada con la tarifa residencial de CFE para Baja California. No sustituye tu recibo oficial.</p>
+            <x-consumption-gauge :kwh="$monthlyCost['projectedKwh']" :capacity="$monthlyCost['projectedCapacity']" />
         </x-card>
 
         <x-card>
