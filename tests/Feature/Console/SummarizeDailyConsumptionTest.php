@@ -18,6 +18,9 @@ class SummarizeDailyConsumptionTest extends TestCase
         $device = Device::factory()->create();
         $yesterday = Carbon::yesterday()->setTime(12, 0);
 
+        // La energía se integra respecto al tiempo real entre lecturas: la de
+        // las 12:00 cuenta 1h a 100W, y la de las 13:00 persiste hasta el
+        // final del día (aprox. 11h) a 300W.
         ConsumptionReading::factory()->for($device)->create(['value' => 100, 'read_at' => $yesterday]);
         ConsumptionReading::factory()->for($device)->create(['value' => 300, 'read_at' => $yesterday->copy()->addHour()]);
 
@@ -26,7 +29,7 @@ class SummarizeDailyConsumptionTest extends TestCase
         $summary = DailyConsumptionSummary::where('device_id', $device->id)->first();
 
         $this->assertNotNull($summary);
-        $this->assertEquals(0.4, (float) $summary->total_kwh);
+        $this->assertEqualsWithDelta(3.4, (float) $summary->total_kwh, 0.001);
         $this->assertEquals(200, (float) $summary->avg_watts);
         $this->assertEquals(100, (float) $summary->min_watts);
         $this->assertEquals(300, (float) $summary->max_watts);
@@ -59,6 +62,36 @@ class SummarizeDailyConsumptionTest extends TestCase
             'device_id' => $device->id,
             'date' => '2026-01-15',
         ]);
+    }
+
+    public function test_it_computes_kwh_using_the_real_time_between_readings(): void
+    {
+        // Lecturas cada 30 min con potencia constante de 1000W durante 24h:
+        // la energía esperada es 1000W * 24h = 24 kWh, no 48 kWh (que es lo
+        // que se obtendría sumando los watts de las 48 lecturas y dividiendo
+        // entre 1000, ignorando que cada una representa solo 30 min).
+        $device = Device::factory()->create();
+        $dayStart = Carbon::yesterday()->startOfDay();
+
+        for ($minutes = 0; $minutes < 24 * 60; $minutes += 30) {
+            ConsumptionReading::factory()->for($device)->create([
+                'value' => 1000,
+                'read_at' => $dayStart->copy()->addMinutes($minutes),
+            ]);
+        }
+        // Lectura que cierra el último intervalo del día.
+        ConsumptionReading::factory()->for($device)->create([
+            'value' => 1000,
+            'read_at' => $dayStart->copy()->addDay(),
+        ]);
+
+        $this->artisan('app:summarize-daily-consumption')->assertExitCode(0);
+
+        $summary = DailyConsumptionSummary::where('device_id', $device->id)->first();
+
+        $this->assertNotNull($summary);
+        $this->assertEqualsWithDelta(24.0, (float) $summary->total_kwh, 0.001);
+        $this->assertEquals(48, $summary->readings_count);
     }
 
     public function test_it_updates_an_existing_summary_instead_of_duplicating_it(): void

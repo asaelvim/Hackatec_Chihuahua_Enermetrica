@@ -18,12 +18,12 @@ use Illuminate\Support\Carbon;
 class SeedDemoData extends Command
 {
     private const DEVICE_PROFILES = [
-        ['area' => 'Oficina', 'name' => 'Aire acondicionado', 'type' => 'Clima', 'model' => 'Mini Split 1 Ton', 'base_watts' => 900, 'noise' => 80],
-        ['area' => 'Oficina', 'name' => 'Iluminación general', 'type' => 'Iluminación', 'model' => 'LED Panel 40W', 'base_watts' => 150, 'noise' => 15],
-        ['area' => 'Producción', 'name' => 'Compresor principal', 'type' => 'Maquinaria', 'model' => 'Compresor 5HP', 'base_watts' => 3200, 'noise' => 250],
-        ['area' => 'Producción', 'name' => 'Banda transportadora', 'type' => 'Maquinaria', 'model' => 'Motor trifásico 2HP', 'base_watts' => 1400, 'noise' => 120],
-        ['area' => 'Bodega', 'name' => 'Refrigerador industrial', 'type' => 'Refrigeración', 'model' => 'Walk-in Cooler', 'base_watts' => 1100, 'noise' => 60],
-        ['area' => 'Bodega', 'name' => 'Iluminación bodega', 'type' => 'Iluminación', 'model' => 'LED Industrial 100W', 'base_watts' => 300, 'noise' => 20],
+        ['area' => 'Oficina', 'name' => 'Aire acondicionado', 'type' => 'Clima', 'model' => 'Mini Split 1 Ton', 'base_watts' => 250, 'noise' => 25],
+        ['area' => 'Oficina', 'name' => 'Iluminación general', 'type' => 'Iluminación', 'model' => 'LED Panel 40W', 'base_watts' => 45, 'noise' => 5],
+        ['area' => 'Producción', 'name' => 'Compresor principal', 'type' => 'Maquinaria', 'model' => 'Compresor 5HP', 'base_watts' => 900, 'noise' => 70],
+        ['area' => 'Producción', 'name' => 'Banda transportadora', 'type' => 'Maquinaria', 'model' => 'Motor trifásico 2HP', 'base_watts' => 400, 'noise' => 35],
+        ['area' => 'Bodega', 'name' => 'Refrigerador industrial', 'type' => 'Refrigeración', 'model' => 'Walk-in Cooler', 'base_watts' => 300, 'noise' => 20],
+        ['area' => 'Bodega', 'name' => 'Iluminación bodega', 'type' => 'Iluminación', 'model' => 'LED Industrial 100W', 'base_watts' => 90, 'noise' => 6],
     ];
 
     public function handle(ConsumptionIngestionService $ingestionService): int

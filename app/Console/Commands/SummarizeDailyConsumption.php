@@ -8,7 +8,6 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 #[Signature('app:summarize-daily-consumption {--date= : Fecha a resumir (Y-m-d), por defecto ayer}')]
 #[Description('Calcula/actualiza el resumen diario de consumo (daily_consumption_summaries) por dispositivo')]
@@ -23,31 +22,61 @@ class SummarizeDailyConsumption extends Command
             ? Carbon::parse($this->option('date'))->startOfDay()
             : Carbon::yesterday();
 
+        $dayStart = $date->copy()->startOfDay();
+        $dayEnd = $date->copy()->endOfDay();
+        // Ventana extra para capturar la lectura inmediatamente posterior a medianoche
+        // y así poder cerrar el último intervalo de energía del día sin cortarlo de golpe.
+        $windowEnd = $dayEnd->copy()->addHours(3);
+
         $devicesSummarized = 0;
 
-        Device::query()->whereHas('consumptionReadings', function ($query) use ($date) {
-            $query->whereBetween('read_at', [$date->copy()->startOfDay(), $date->copy()->endOfDay()]);
-        })->chunkById(50, function ($devices) use ($date, &$devicesSummarized) {
+        Device::query()->whereHas('consumptionReadings', function ($query) use ($dayStart, $dayEnd) {
+            $query->whereBetween('read_at', [$dayStart, $dayEnd]);
+        })->chunkById(50, function ($devices) use ($dayStart, $dayEnd, $windowEnd, $date, &$devicesSummarized) {
             foreach ($devices as $device) {
-                $stats = $device->consumptionReadings()
-                    ->whereBetween('read_at', [$date->copy()->startOfDay(), $date->copy()->endOfDay()])
-                    ->select([
-                        DB::raw('SUM(value) as total_value'),
-                        DB::raw('AVG(value) as avg_value'),
-                        DB::raw('MIN(value) as min_value'),
-                        DB::raw('MAX(value) as max_value'),
-                        DB::raw('COUNT(*) as readings_count'),
-                    ])
-                    ->first();
+                $readings = $device->consumptionReadings()
+                    ->whereBetween('read_at', [$dayStart, $windowEnd])
+                    ->orderBy('read_at')
+                    ->get(['value', 'read_at'])
+                    ->values();
+
+                $dayReadingsCount = $readings->filter(fn ($reading) => $reading->read_at->lte($dayEnd))->count();
+
+                if ($dayReadingsCount === 0) {
+                    continue;
+                }
+
+                // Integra la energía (Wh) usando la duración real entre cada lectura y la
+                // siguiente, en vez de sumar los watts como si cada lectura representara
+                // una hora completa (eso duplicaba la energía con lecturas cada 30 min).
+                $totalWh = 0.0;
+                $sumValue = 0.0;
+                $minValue = null;
+                $maxValue = null;
+
+                for ($i = 0; $i < $dayReadingsCount; $i++) {
+                    $reading = $readings[$i];
+                    $next = $readings->get($i + 1);
+                    $intervalEndTimestamp = $next
+                        ? min($next->read_at->getTimestamp(), $dayEnd->getTimestamp())
+                        : $dayEnd->getTimestamp();
+
+                    $hours = max(0, ($intervalEndTimestamp - $reading->read_at->getTimestamp()) / 3600);
+                    $totalWh += $reading->value * $hours;
+
+                    $sumValue += $reading->value;
+                    $minValue = $minValue === null ? $reading->value : min($minValue, $reading->value);
+                    $maxValue = $maxValue === null ? $reading->value : max($maxValue, $reading->value);
+                }
 
                 DailyConsumptionSummary::updateOrCreate(
                     ['device_id' => $device->id, 'date' => $date->toDateString()],
                     [
-                        'total_kwh' => $stats->total_value / 1000,
-                        'avg_watts' => $stats->avg_value,
-                        'min_watts' => $stats->min_value,
-                        'max_watts' => $stats->max_value,
-                        'readings_count' => $stats->readings_count,
+                        'total_kwh' => $totalWh / 1000,
+                        'avg_watts' => $sumValue / $dayReadingsCount,
+                        'min_watts' => $minValue,
+                        'max_watts' => $maxValue,
+                        'readings_count' => $dayReadingsCount,
                     ]
                 );
 
