@@ -124,11 +124,11 @@ class extends Component
             </x-card>
             <x-card>
                 <p class="text-sm text-gray-500">Promedio de potencia</p>
-                <p class="text-2xl font-semibold text-gray-800 mt-1">{{ number_format((float) ($totals->avg_watts ?? 0), 1) }} W</p>
+                <p class="text-2xl font-semibold text-gray-800 mt-1">{{ number_format((float) ($totals->avg_watts ?? 0) / 1000, 2) }} kW</p>
             </x-card>
             <x-card>
                 <p class="text-sm text-gray-500">Pico máximo</p>
-                <p class="text-2xl font-semibold text-gray-800 mt-1">{{ number_format((float) ($totals->max_watts ?? 0), 1) }} W</p>
+                <p class="text-2xl font-semibold text-gray-800 mt-1">{{ number_format((float) ($totals->max_watts ?? 0) / 1000, 2) }} kW</p>
             </x-card>
         </div>
 

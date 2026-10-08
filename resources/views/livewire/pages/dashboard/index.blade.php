@@ -43,13 +43,13 @@ class extends Component
         for ($i = 0; $i < 24; $i++) {
             $hour = $start->copy()->addHours($i);
             $labels[] = $hour->format('H:i');
-            $data[] = (float) ($readings[$hour->format('Y-m-d H:00:00')] ?? 0);
+            $data[] = round((float) ($readings[$hour->format('Y-m-d H:00:00')] ?? 0) / 1000, 3);
         }
 
         return [
             'labels' => $labels,
             'datasets' => [[
-                'label' => 'Consumo total (W)',
+                'label' => 'Consumo total (kW)',
                 'data' => $data,
                 'borderColor' => '#2563eb',
                 'backgroundColor' => 'rgba(37, 99, 235, 0.15)',
@@ -87,58 +87,76 @@ class extends Component
 
     <div class="py-8 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <x-card class="flex items-center gap-3">
-                <span class="flex-shrink-0 rounded-lg bg-indigo-50 p-2 text-indigo-600">
-                    <i class="fa-solid fa-microchip text-lg"></i>
-                </span>
-                <div>
-                    <p class="text-sm text-gray-500">Dispositivos</p>
-                    <p class="text-2xl font-semibold text-gray-800 mt-1">{{ $totalDevices }}</p>
+            <x-card class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="flex-shrink-0 rounded-lg bg-indigo-50 p-2 text-indigo-600">
+                        <i class="fa-solid fa-microchip text-lg"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Dispositivos</p>
+                        <p class="text-2xl font-semibold text-gray-800 mt-1">{{ $totalDevices }}</p>
+                    </div>
                 </div>
+                <a href="{{ route('web.devices.index') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </x-card>
-            <x-card class="flex items-center gap-3">
-                <span class="flex-shrink-0 rounded-lg bg-emerald-50 p-2 text-emerald-600">
-                    <i class="fa-solid fa-bolt text-lg"></i>
-                </span>
-                <div>
-                    <p class="text-sm text-gray-500">Encendidos</p>
-                    <p class="text-2xl font-semibold text-emerald-600 mt-1">{{ $onDevices }}</p>
+            <x-card class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="flex-shrink-0 rounded-lg bg-emerald-50 p-2 text-emerald-600">
+                        <i class="fa-solid fa-bolt text-lg"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Encendidos</p>
+                        <p class="text-2xl font-semibold text-emerald-600 mt-1">{{ $onDevices }}</p>
+                    </div>
                 </div>
+                <a href="{{ route('web.devices.index') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </x-card>
-            <x-card class="flex items-center gap-3">
-                <span class="flex-shrink-0 rounded-lg bg-red-50 p-2 text-red-600">
-                    <i class="fa-solid fa-ban text-lg"></i>
-                </span>
-                <div>
-                    <p class="text-sm text-gray-500">Sin conexión</p>
-                    <p class="text-2xl font-semibold text-red-600 mt-1">{{ $offlineDevices }}</p>
+            <x-card class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="flex-shrink-0 rounded-lg bg-red-50 p-2 text-red-600">
+                        <i class="fa-solid fa-ban text-lg"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Sin conexión</p>
+                        <p class="text-2xl font-semibold text-red-600 mt-1">{{ $offlineDevices }}</p>
+                    </div>
                 </div>
+                <a href="{{ route('web.devices.index') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </x-card>
-            <x-card class="flex items-center gap-3">
-                <span class="flex-shrink-0 rounded-lg bg-amber-50 p-2 text-amber-600">
-                    <i class="fa-solid fa-screwdriver-wrench text-lg"></i>
-                </span>
-                <div>
-                    <p class="text-sm text-gray-500">En mantenimiento</p>
-                    <p class="text-2xl font-semibold text-amber-600 mt-1">{{ $maintenanceDevices }}</p>
+            <x-card class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="flex-shrink-0 rounded-lg bg-amber-50 p-2 text-amber-600">
+                        <i class="fa-solid fa-screwdriver-wrench text-lg"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">En mantenimiento</p>
+                        <p class="text-2xl font-semibold text-amber-600 mt-1">{{ $maintenanceDevices }}</p>
+                    </div>
                 </div>
+                <a href="{{ route('web.devices.index') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </x-card>
-            <x-card class="flex items-center gap-3">
-                <span class="flex-shrink-0 rounded-lg bg-amber-50 p-2 text-amber-600">
-                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
-                </span>
-                <div>
-                    <p class="text-sm text-gray-500">Anomalías pendientes</p>
-                    <p class="text-2xl font-semibold text-amber-600 mt-1">{{ $pendingAnomalies }}</p>
+            <x-card class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                    <span class="flex-shrink-0 rounded-lg bg-amber-50 p-2 text-amber-600">
+                        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                    </span>
+                    <div>
+                        <p class="text-sm text-gray-500">Anomalías pendientes</p>
+                        <p class="text-2xl font-semibold text-amber-600 mt-1">{{ $pendingAnomalies }}</p>
+                    </div>
                 </div>
+                <a href="{{ route('web.anomalies.index') }}" wire:navigate class="text-xs text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </x-card>
         </div>
 
         <x-card>
-            <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                <i class="fa-solid fa-chart-line text-indigo-600"></i>
-                Consumo total — últimas 24 horas
-            </h3>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                    Consumo total — últimas 24 horas
+                </h3>
+                <a href="{{ route('web.statistics.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
+            </div>
             <div wire:ignore x-data="initLineChart(@js($chartData), 'dashboard-chart-updated')" class="h-64">
                 <canvas x-ref="canvas"></canvas>
             </div>
@@ -146,17 +164,20 @@ class extends Component
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <x-card class="lg:col-span-2">
-                <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                    <i class="fa-solid fa-trophy text-indigo-600"></i>
-                    Top 5 dispositivos — consumo últimas 24h
-                </h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <i class="fa-solid fa-trophy text-indigo-600"></i>
+                        Top 5 dispositivos — consumo últimas 24h
+                    </h3>
+                    <a href="{{ route('web.devices.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
+                </div>
                 <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-100">
                     <thead>
                         <tr>
                             <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispositivo</th>
                             <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
-                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total (W)</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total (kW)</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -164,7 +185,7 @@ class extends Component
                             <tr wire:key="top-device-{{ $reading->device_id }}">
                                 <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ $reading->device?->name ?? '—' }}</td>
                                 <td class="px-2 py-2 text-sm text-gray-500">{{ $reading->device?->area?->name ?? '—' }}</td>
-                                <td class="px-2 py-2 text-sm text-gray-500 text-right whitespace-nowrap">{{ number_format((float) $reading->total, 1) }}</td>
+                                <td class="px-2 py-2 text-sm text-gray-500 text-right whitespace-nowrap">{{ number_format((float) $reading->total / 1000, 2) }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -177,10 +198,13 @@ class extends Component
             </x-card>
 
             <x-card>
-                <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
-                    <i class="fa-solid fa-building text-indigo-600"></i>
-                    Dispositivos por área
-                </h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <i class="fa-solid fa-building text-indigo-600"></i>
+                        Dispositivos por área
+                    </h3>
+                    <a href="{{ route('web.areas.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
+                </div>
                 <ul class="divide-y divide-gray-100">
                     @forelse ($areaBreakdown as $area)
                         <li wire:key="area-{{ $area->id }}" class="flex items-center justify-between py-2 text-sm">
@@ -200,7 +224,7 @@ class extends Component
                     <i class="fa-solid fa-clock text-indigo-600"></i>
                     Anomalías recientes
                 </h3>
-                <a href="{{ route('web.anomalies.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver todas</a>
+                <a href="{{ route('web.anomalies.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver más →</a>
             </div>
             <table class="min-w-full divide-y divide-gray-100">
                 <thead>
@@ -216,7 +240,7 @@ class extends Component
                     @forelse ($recentAnomalies as $anomaly)
                         <tr wire:key="recent-anomaly-{{ $anomaly->id }}">
                             <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ $anomaly->device?->name ?? '—' }}</td>
-                            <td class="px-2 py-2 text-sm text-gray-500">{{ number_format((float) $anomaly->value, 2) }} W</td>
+                            <td class="px-2 py-2 text-sm text-gray-500">{{ number_format((float) $anomaly->value / 1000, 2) }} kW</td>
                             <td class="px-2 py-2 text-sm text-gray-500">{{ number_format((float) $anomaly->z_score, 2) }}</td>
                             <td class="px-2 py-2 text-sm text-gray-500">{{ $anomaly->created_at->format('d/m/Y H:i') }}</td>
                             <td class="px-2 py-2 text-sm">

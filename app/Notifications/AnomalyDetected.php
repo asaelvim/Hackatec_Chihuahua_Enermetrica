@@ -31,7 +31,7 @@ class AnomalyDetected extends Notification implements ShouldQueue
             ->subject('Enermetrica: consumo anómalo detectado')
             ->greeting('Se detectó un consumo fuera de lo normal')
             ->line("Dispositivo: {$device->name}")
-            ->line('Valor registrado: '.number_format((float) $this->anomaly->value, 2).' W')
+            ->line('Valor registrado: '.number_format((float) $this->anomaly->value / 1000, 2).' kW')
             ->line('Desviación (z-score): '.number_format((float) $this->anomaly->z_score, 2))
             ->action('Ver anomalías', url('/anomalias'))
             ->line('Revisa el dashboard para marcarla como revisada.');
@@ -46,7 +46,7 @@ class AnomalyDetected extends Notification implements ShouldQueue
 
         return [
             'title' => 'Consumo anómalo detectado',
-            'body' => "{$device->name}: ".number_format((float) $this->anomaly->value, 2).' W',
+            'body' => "{$device->name}: ".number_format((float) $this->anomaly->value / 1000, 2).' kW',
             'data' => [
                 'type' => 'anomaly',
                 'anomaly_id' => (string) $this->anomaly->id,
