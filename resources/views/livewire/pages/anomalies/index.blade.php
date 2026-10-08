@@ -54,7 +54,7 @@ class extends Component
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispositivo</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Z-score</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severidad</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                         <th class="px-6 py-3"></th>
@@ -65,7 +65,9 @@ class extends Component
                         <tr wire:key="anomaly-{{ $anomaly->id }}" class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-sm font-medium text-gray-800">{{ $anomaly->device?->name }}</td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ number_format((float) $anomaly->value / 1000, 2) }} kW</td>
-                            <td class="px-6 py-4 text-sm text-gray-500">{{ number_format((float) $anomaly->z_score, 2) }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-500">
+                                <x-severity-badge :score="$anomaly->z_score" />
+                            </td>
                             <td class="px-6 py-4 text-sm text-gray-500">{{ $anomaly->created_at->format('d/m/Y H:i') }}</td>
                             <td class="px-6 py-4 text-sm">
                                 @if ($anomaly->reviewed_at)

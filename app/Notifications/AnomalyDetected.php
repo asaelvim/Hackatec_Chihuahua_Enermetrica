@@ -32,7 +32,7 @@ class AnomalyDetected extends Notification implements ShouldQueue
             ->greeting('Se detectó un consumo fuera de lo normal')
             ->line("Dispositivo: {$device->name}")
             ->line('Valor registrado: '.number_format((float) $this->anomaly->value / 1000, 2).' kW')
-            ->line('Desviación (z-score): '.number_format((float) $this->anomaly->z_score, 2))
+            ->line('Severidad: '.$this->severityLabel())
             ->action('Ver anomalías', url('/anomalias'))
             ->line('Revisa el dashboard para marcarla como revisada.');
     }
@@ -46,13 +46,30 @@ class AnomalyDetected extends Notification implements ShouldQueue
 
         return [
             'title' => 'Consumo anómalo detectado',
-            'body' => "{$device->name}: ".number_format((float) $this->anomaly->value / 1000, 2).' kW',
+            'body' => "{$device->name}: ".number_format((float) $this->anomaly->value / 1000, 2).' kW ('.$this->severityLabel().')',
             'data' => [
                 'type' => 'anomaly',
                 'anomaly_id' => (string) $this->anomaly->id,
                 'device_id' => (string) $device->id,
             ],
         ];
+    }
+
+    /**
+     * Traduce el z-score estadístico a una etiqueta de severidad entendible
+     * por el usuario (el mismo criterio usado en el componente
+     * <x-severity-badge>).
+     */
+    private function severityLabel(): string
+    {
+        $score = (float) $this->anomaly->z_score;
+
+        return match (true) {
+            $score >= 7 => 'Crítica',
+            $score >= 5 => 'Alta',
+            $score >= 3 => 'Moderada',
+            default => 'Leve',
+        };
     }
 
     /**
