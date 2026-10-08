@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Anomaly;
+use App\Models\Area;
 use App\Models\ConsumptionReading;
 use App\Models\Device;
 use Illuminate\Support\Carbon;
@@ -20,6 +21,9 @@ class extends Component
             'maintenanceDevices' => Device::where('status', 'maintenance')->count(),
             'pendingAnomalies' => Anomaly::whereNull('reviewed_at')->count(),
             'chartData' => $this->consumptionChartData(),
+            'topDevices' => $this->topDevices(),
+            'recentAnomalies' => Anomaly::with('device')->latest('id')->limit(5)->get(),
+            'areaBreakdown' => Area::withCount('devices')->orderByDesc('devices_count')->get(),
         ];
     }
 
@@ -54,6 +58,20 @@ class extends Component
                 'pointRadius' => 0,
             ]],
         ];
+    }
+
+    private function topDevices()
+    {
+        $start = Carbon::now()->subHours(24);
+
+        return ConsumptionReading::query()
+            ->with('device.area')
+            ->selectRaw('device_id, SUM(value) as total, AVG(value) as average')
+            ->where('read_at', '>=', $start)
+            ->groupBy('device_id')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get();
     }
 
     public function poll(): void
@@ -98,15 +116,87 @@ class extends Component
             </div>
         </x-card>
 
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <x-card class="lg:col-span-2">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Top 5 dispositivos — consumo últimas 24h</h3>
+                <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead>
+                        <tr>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispositivo</th>
+                            <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                            <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total (W)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @forelse ($topDevices as $reading)
+                            <tr wire:key="top-device-{{ $reading->device_id }}">
+                                <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ $reading->device?->name ?? '—' }}</td>
+                                <td class="px-2 py-2 text-sm text-gray-500">{{ $reading->device?->area?->name ?? '—' }}</td>
+                                <td class="px-2 py-2 text-sm text-gray-500 text-right whitespace-nowrap">{{ number_format((float) $reading->total, 1) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="px-2 py-6 text-center text-sm text-gray-400">Sin lecturas en las últimas 24 horas.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                </div>
+            </x-card>
+
+            <x-card>
+                <h3 class="text-sm font-medium text-gray-700 mb-3">Dispositivos por área</h3>
+                <ul class="divide-y divide-gray-100">
+                    @forelse ($areaBreakdown as $area)
+                        <li wire:key="area-{{ $area->id }}" class="flex items-center justify-between py-2 text-sm">
+                            <span class="text-gray-700">{{ $area->name }}</span>
+                            <span class="font-semibold text-gray-800">{{ $area->devices_count }}</span>
+                        </li>
+                    @empty
+                        <li class="py-6 text-center text-sm text-gray-400">Sin áreas registradas.</li>
+                    @endforelse
+                </ul>
+            </x-card>
+        </div>
+
         <x-card>
-            <h3 class="text-sm font-medium text-gray-700 mb-3">Accesos rápidos</h3>
-            <div class="flex flex-wrap gap-3">
-                <a href="{{ route('web.areas.index') }}" wire:navigate class="px-4 py-2 text-sm rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200">Áreas</a>
-                <a href="{{ route('web.devices.index') }}" wire:navigate class="px-4 py-2 text-sm rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200">Dispositivos</a>
-                <a href="{{ route('web.schedules.index') }}" wire:navigate class="px-4 py-2 text-sm rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200">Horarios</a>
-                <a href="{{ route('web.anomalies.index') }}" wire:navigate class="px-4 py-2 text-sm rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200">Anomalías</a>
-                <a href="{{ route('web.statistics.index') }}" wire:navigate class="px-4 py-2 text-sm rounded-md bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200">Estadísticas</a>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-medium text-gray-700">Anomalías recientes</h3>
+                <a href="{{ route('web.anomalies.index') }}" wire:navigate class="text-sm text-indigo-600 hover:text-indigo-800">Ver todas</a>
             </div>
+            <table class="min-w-full divide-y divide-gray-100">
+                <thead>
+                    <tr>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispositivo</th>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Z-score</th>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                        <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse ($recentAnomalies as $anomaly)
+                        <tr wire:key="recent-anomaly-{{ $anomaly->id }}">
+                            <td class="px-2 py-2 text-sm font-medium text-gray-800">{{ $anomaly->device?->name ?? '—' }}</td>
+                            <td class="px-2 py-2 text-sm text-gray-500">{{ number_format((float) $anomaly->value, 2) }} W</td>
+                            <td class="px-2 py-2 text-sm text-gray-500">{{ number_format((float) $anomaly->z_score, 2) }}</td>
+                            <td class="px-2 py-2 text-sm text-gray-500">{{ $anomaly->created_at->format('d/m/Y H:i') }}</td>
+                            <td class="px-2 py-2 text-sm">
+                                @if ($anomaly->reviewed_at)
+                                    <span class="px-2 py-1 text-xs rounded-full bg-emerald-100 text-emerald-700">Revisada</span>
+                                @else
+                                    <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700">Pendiente</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-2 py-6 text-center text-sm text-gray-400">No hay anomalías registradas.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </x-card>
     </div>
 </div>
