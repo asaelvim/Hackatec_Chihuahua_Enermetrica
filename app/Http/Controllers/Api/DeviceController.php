@@ -7,6 +7,7 @@ use App\Http\Requests\Api\StoreDeviceRequest;
 use App\Http\Requests\Api\UpdateDeviceRequest;
 use App\Http\Resources\DeviceResource;
 use App\Models\Device;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class DeviceController extends Controller
@@ -17,7 +18,7 @@ class DeviceController extends Controller
     public function index()
     {
         return DeviceResource::collection(
-            Device::query()->with(['area', 'deviceType', 'deviceModel'])->orderBy('name')->paginate()
+            Device::query()->with(['area', 'deviceType', 'deviceModel', 'controller'])->orderBy('name')->paginate()
         );
     }
 
@@ -28,7 +29,7 @@ class DeviceController extends Controller
     {
         $device = Device::create($request->validated());
 
-        return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel']));
+        return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel', 'controller']));
     }
 
     /**
@@ -36,7 +37,7 @@ class DeviceController extends Controller
      */
     public function show(Device $device)
     {
-        return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel']));
+        return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel', 'controller']));
     }
 
     /**
@@ -46,7 +47,7 @@ class DeviceController extends Controller
     {
         $device->update($request->validated());
 
-        return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel']));
+        return new DeviceResource($device->load(['area', 'deviceType', 'deviceModel', 'controller']));
     }
 
     /**
@@ -67,5 +68,16 @@ class DeviceController extends Controller
         $device->forceFill(['api_token' => Str::random(40)])->save();
 
         return response()->json(['api_token' => $device->api_token]);
+    }
+
+    /**
+     * Enciende/apaga con un clic (usado por la app móvil y el panel web).
+     * No hace nada si el dispositivo está "offline"/"maintenance".
+     */
+    public function toggleStatus(Request $request, Device $device)
+    {
+        $device->toggleStatus($request->user());
+
+        return new DeviceResource($device->fresh(['area', 'deviceType', 'deviceModel', 'controller']));
     }
 }

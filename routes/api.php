@@ -5,12 +5,14 @@ use App\Http\Controllers\Api\AreaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConsumptionReadingController;
 use App\Http\Controllers\Api\DailyConsumptionSummaryController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\DeviceModelController;
 use App\Http\Controllers\Api\DeviceRelayChannelController;
 use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\DeviceTypeController;
 use App\Http\Controllers\Api\ScheduleController;
+use App\Http\Controllers\Api\StatisticsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -31,12 +33,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/statistics', [StatisticsController::class, 'summary']);
+
     Route::apiResource('areas', AreaController::class);
     Route::apiResource('device-types', DeviceTypeController::class);
     Route::apiResource('device-models', DeviceModelController::class);
 
     Route::apiResource('devices', DeviceController::class);
     Route::post('/devices/{device}/regenerate-token', [DeviceController::class, 'regenerateToken']);
+    Route::post('/devices/{device}/toggle-status', [DeviceController::class, 'toggleStatus']);
 
     Route::apiResource('schedules', ScheduleController::class);
 

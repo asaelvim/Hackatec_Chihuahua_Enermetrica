@@ -122,4 +122,27 @@ class Device extends Model
     {
         return $this->controller_device_id !== null;
     }
+
+    /**
+     * Enciende/apaga con un clic (desde el panel web o la app móvil).
+     * No hace nada si el estado actual es "offline"/"maintenance" (esos
+     * solo se cambian forzosamente desde Editar). Devuelve si se aplicó.
+     */
+    public function toggleStatus(?User $actor = null): bool
+    {
+        if (! $this->isTogglable()) {
+            return false;
+        }
+
+        $newStatus = $this->status === 'on' ? 'off' : 'on';
+
+        $this->update(array_merge(
+            ['status' => $newStatus],
+            $this->isRelayControlled()
+                ? ['commanded_at' => now(), 'commanded_by' => $actor?->id]
+                : []
+        ));
+
+        return true;
+    }
 }

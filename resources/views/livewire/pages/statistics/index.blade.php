@@ -2,7 +2,7 @@
 
 use App\Models\DailyConsumptionSummary;
 use App\Models\Device;
-use App\Services\CfeTariffCalculator;
+use App\Services\StatisticsSummaryService;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -39,6 +39,8 @@ class extends Component
 
     public function with(): array
     {
+        $service = app(StatisticsSummaryService::class);
+
         $summaries = DailyConsumptionSummary::with('device')
             ->when($this->device_id, fn ($query) => $query->where('device_id', $this->device_id))
             ->when($this->from, fn ($query) => $query->where('date', '>=', $this->from))
@@ -46,20 +48,9 @@ class extends Component
             ->orderByDesc('date')
             ->paginate(10);
 
-        $totals = DailyConsumptionSummary::query()
-            ->when($this->device_id, fn ($query) => $query->where('device_id', $this->device_id))
-            ->when($this->from, fn ($query) => $query->where('date', '>=', $this->from))
-            ->when($this->to, fn ($query) => $query->where('date', '<=', $this->to))
-            ->selectRaw('SUM(total_kwh) as total_kwh, AVG(avg_watts) as avg_watts, MAX(max_watts) as max_watts')
-            ->first();
+        $totals = $service->totals($this->device_id, $this->from, $this->to);
 
         $maxDaily = (float) ($summaries->max('total_kwh') ?: 1);
-
-        $estimatedCost = (new CfeTariffCalculator)->estimate(
-            (float) ($totals->total_kwh ?? 0),
-            Carbon::parse($this->from ?: Carbon::now()->subDays(6)),
-            Carbon::parse($this->to ?: Carbon::now()),
-        );
 
         return [
             'summaries' => $summaries,
@@ -67,33 +58,13 @@ class extends Component
             'maxDaily' => $maxDaily,
             'devices' => Device::orderBy('name')->get(),
             'chartData' => $this->chartData(),
-            'estimatedCost' => $estimatedCost,
+            'estimatedCost' => $service->estimatedCost($this->device_id, $this->from, $this->to),
         ];
     }
 
     private function chartData(): array
     {
-        $rows = DailyConsumptionSummary::query()
-            ->when($this->device_id, fn ($query) => $query->where('device_id', $this->device_id))
-            ->when($this->from, fn ($query) => $query->where('date', '>=', $this->from))
-            ->when($this->to, fn ($query) => $query->where('date', '<=', $this->to))
-            ->selectRaw('date, SUM(total_kwh) as total_kwh')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
-        return [
-            'labels' => $rows->map(fn ($row) => Carbon::parse($row->date)->format('d/m'))->all(),
-            'datasets' => [[
-                'label' => 'Consumo diario (kWh)',
-                'data' => $rows->map(fn ($row) => (float) $row->total_kwh)->all(),
-                'borderColor' => '#2563eb',
-                'backgroundColor' => 'rgba(37, 99, 235, 0.15)',
-                'fill' => true,
-                'tension' => 0.3,
-                'pointRadius' => 2,
-            ]],
-        ];
+        return app(StatisticsSummaryService::class)->chartData($this->device_id, $this->from, $this->to);
     }
 }; ?>
 

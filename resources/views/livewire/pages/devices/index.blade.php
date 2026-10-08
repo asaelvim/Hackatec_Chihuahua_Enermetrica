@@ -129,20 +129,7 @@ class extends Component
      */
     public function toggleStatus(int $deviceId): void
     {
-        $device = Device::findOrFail($deviceId);
-
-        if (! $device->isTogglable()) {
-            return;
-        }
-
-        $newStatus = $device->status === 'on' ? 'off' : 'on';
-
-        $device->update(array_merge(
-            ['status' => $newStatus],
-            $device->isRelayControlled()
-                ? ['commanded_at' => now(), 'commanded_by' => auth()->id()]
-                : []
-        ));
+        Device::findOrFail($deviceId)->toggleStatus(auth()->user());
     }
 }; ?>
 
