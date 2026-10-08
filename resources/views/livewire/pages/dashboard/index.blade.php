@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Anomaly;
+use App\Models\ConsumptionReading;
 use App\Models\Device;
+use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -17,6 +19,40 @@ class extends Component
             'offlineDevices' => Device::where('status', 'offline')->count(),
             'maintenanceDevices' => Device::where('status', 'maintenance')->count(),
             'pendingAnomalies' => Anomaly::whereNull('reviewed_at')->count(),
+            'chartData' => $this->consumptionChartData(),
+        ];
+    }
+
+    private function consumptionChartData(): array
+    {
+        $start = Carbon::now()->subHours(23)->startOfHour();
+
+        $readings = ConsumptionReading::query()
+            ->selectRaw('DATE_FORMAT(read_at, "%Y-%m-%d %H:00:00") as bucket, SUM(value) as total')
+            ->where('read_at', '>=', $start)
+            ->groupBy('bucket')
+            ->pluck('total', 'bucket');
+
+        $labels = [];
+        $data = [];
+
+        for ($i = 0; $i < 24; $i++) {
+            $hour = $start->copy()->addHours($i);
+            $labels[] = $hour->format('H:i');
+            $data[] = (float) ($readings[$hour->format('Y-m-d H:00:00')] ?? 0);
+        }
+
+        return [
+            'labels' => $labels,
+            'datasets' => [[
+                'label' => 'Consumo total (W)',
+                'data' => $data,
+                'borderColor' => '#2563eb',
+                'backgroundColor' => 'rgba(37, 99, 235, 0.15)',
+                'fill' => true,
+                'tension' => 0.3,
+                'pointRadius' => 0,
+            ]],
         ];
     }
 }; ?>
@@ -49,6 +85,13 @@ class extends Component
                 <p class="text-2xl font-semibold text-amber-600 mt-1">{{ $pendingAnomalies }}</p>
             </x-card>
         </div>
+
+        <x-card>
+            <h3 class="text-sm font-medium text-gray-700 mb-3">Consumo total — últimas 24 horas</h3>
+            <div wire:ignore x-data="initLineChart(@js($chartData))" class="h-64">
+                <canvas x-ref="canvas"></canvas>
+            </div>
+        </x-card>
 
         <x-card>
             <h3 class="text-sm font-medium text-gray-700 mb-3">Accesos rápidos</h3>
